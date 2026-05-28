@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0c0c0c;
+  --color-foreground: #e5e2e1;
+  --color-card: #141414;
+  --color-card-foreground: #e5e2e1;
+  --color-popover: #1a1a1a;
+  --color-popover-foreground: #e5e2e1;
+  --color-primary: #10b981;
+  --color-primary-foreground: #003824;
+  --color-secondary: #201f1f;
+  --color-secondary-foreground: #bbcabf;
+  --color-muted: #1c1b1b;
+  --color-muted-foreground: #a1a1aa;
+  --color-accent: #1f1f1f;
+  --color-accent-foreground: #e5e2e1;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #690005;
+  --color-border: #1f1f1f;
+  --color-input: #1f1f1f;
+  --color-ring: #10b981;
+
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.5rem;
+
+  --font-sans: 'Geist', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --animate-shimmer: shimmer 2s linear infinite;
+  
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .bg-linear-surface {
+    background: linear-gradient(135deg, rgba(31,31,31,0.5) 0%, rgba(20,20,20,1) 100%);
+  }
+}

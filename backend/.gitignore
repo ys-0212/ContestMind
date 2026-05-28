@@ -1,0 +1,22 @@
+# Environment
+.env
+.env.*
+*.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+.next/
+
+# Chroma
+backend/data/chroma/
+
+# Secrets
+docs/secrets_locals.txt
+
+frontend/AGENTS.md
+frontend/CLAUDE.md

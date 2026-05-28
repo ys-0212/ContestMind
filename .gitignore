@@ -1,0 +1,50 @@
+# ── OS & IDE ──
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# ── Environment Variables ──
+.env
+.env.*
+!.env.example
+*.env
+
+# ── Backend (Python) ──
+backend/docs/
+backend/venv/
+backend/env/
+backend/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+# Data / Vector DB
+backend/data/
+backend/chroma/
+*.sqlite3
+*.db
+
+# ── Frontend (Next.js & Node) ──
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel/
+frontend/coverage/
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Project Specific / AI Artifacts ──
+docs/secrets_locals.txt
+/*.md
+!/README.md
+frontend/AGENTS.md
+frontend/CLAUDE.md
+backend/AGENTS.md
+backend/CLAUDE.md
