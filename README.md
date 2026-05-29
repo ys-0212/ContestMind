@@ -14,7 +14,7 @@
 
 ---
 
-## 📖 Introduction
+## Introduction
 
 **ContestMind** is not just another coding dashboard—it is an intelligent, personalized learning and reasoning platform built for competitive programmers. By integrating directly with Codeforces, ContestMind analyzes your past submissions, identifies cognitive blockers, and provides a highly contextual AI coach to help you break through your plateau.
 
@@ -22,7 +22,7 @@ Stop grinding randomly. Start practicing intelligently.
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description | Icon |
 | :--- | :--- | :---: |
@@ -34,7 +34,7 @@ Stop grinding randomly. Start practicing intelligently.
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ContestMind is built using a modern, scalable, and fully decoupled architecture.
 
@@ -52,7 +52,7 @@ ContestMind is built using a modern, scalable, and fully decoupled architecture.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 Follow these instructions to get a copy of the project up and running on your local machine.
 
@@ -114,7 +114,7 @@ npm run dev
 
 ---
 
-## 🕹️ Usage
+## Usage
 
 1. **Dashboard Overview**: Navigate to `http://localhost:3000`. Set your Codeforces handle in the settings.
 2. **Review Analytics**: The coaching engine will analyze your Codeforces history and generate your personalized "Comfort Zone", identifying your weakest tags.
@@ -128,7 +128,7 @@ npm run dev
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions make the open-source community an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
