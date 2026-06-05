@@ -50,6 +50,21 @@ ContestMind is built using a modern, scalable, and fully decoupled architecture.
 - **Vector DB**: ChromaDB for Retrieval-Augmented Generation (RAG) and semantic problem search
 - **Integrations**: Codeforces API, external Code Execution Engines (Piston), LLM APIs
 
+### **ML — Solve Probability Engine**
+
+A stacking ensemble model predicts each user's probability of solving any given problem, powering both the per-problem probability bar and the recommendation ranking.
+
+| Component | Detail |
+| :--- | :--- |
+| **Architecture** | 3-model Stacking Ensemble with Logistic Regression meta-learner |
+| **Base learners** | XGBoost (200 trees, depth 4) · LightGBM (200 trees, 31 leaves) · MLP (128→64→32, Adam, early stopping) |
+| **Meta-learner** | Logistic Regression on 5-fold out-of-fold `predict_proba` outputs |
+| **Features** | 15 engineered features: rating gap, Elo baseline, experience tier, difficulty tier, stretch-problem flag, comfort-zone distance, solve-rate proxy, rating volatility, and more |
+| **Training data** | 50,000 synthetic samples with realistic user/problem distributions |
+| **AUC-ROC** | **0.973** · Accuracy 91.7% · F1 89.2% · Brier Score 0.059 |
+| **Top features** | `is_stretch_problem` (36%) and `elo_baseline` (35%) dominate — confirming that domain priors are the strongest signal |
+| **Training script** | `backend/scripts/train_probability_model.py` — run once to regenerate `solve_prob_ensemble.joblib` |
+
 ---
 
 ## Getting Started

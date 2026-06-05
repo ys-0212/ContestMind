@@ -16,5 +16,6 @@ sentence-transformers
 # Data and ML
 supabase
 xgboost
+lightgbm
 scikit-learn
 pandas
