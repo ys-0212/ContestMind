@@ -10,8 +10,7 @@ pydantic-settings
 groq
 
 # Vector DB and embeddings
-chromadb
-sentence-transformers
+fastembed
 
 # Data and ML
 supabase
