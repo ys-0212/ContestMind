@@ -20,3 +20,7 @@ scikit-learn
 pandas
 PyJWT
 gunicorn
+
+# Web Scraping
+beautifulsoup4
+lxml

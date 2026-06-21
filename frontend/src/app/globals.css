@@ -58,4 +58,45 @@
   .bg-linear-surface {
     background: linear-gradient(135deg, rgba(31,31,31,0.5) 0%, rgba(20,20,20,1) 100%);
   }
+
+  /* Codeforces Scraped HTML Styling */
+  .problem-html-content p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+  }
+  .problem-html-content .section-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-foreground);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .problem-html-content ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .problem-html-content li {
+    margin-bottom: 0.25rem;
+  }
+  .problem-html-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+  }
+  .problem-html-content th, .problem-html-content td {
+    border: 1px solid var(--color-border);
+    padding: 0.5rem;
+    text-align: center;
+  }
+  .problem-html-content th {
+    background-color: var(--color-muted);
+  }
+  /* Fix MathJax overflow */
+  .MathJax_Display {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
 }

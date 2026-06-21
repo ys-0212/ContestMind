@@ -61,84 +61,14 @@ function diffBadge(rating) {
   return "expert"
 }
 
-/**
- * Parse Input/Output example pairs from a scraped Codeforces statement.
- * The scraper's `.get_text(separator="\n")` produces blocks like:
- *   …statement…
- *   Input
- *   {input text}
- *   Output
- *   {output text}
- *   Input
- *   …
- */
-function parseExamples(statement) {
-  if (!statement) return []
-  const examples = []
-  const lines = statement.split("\n")
-  const SECTION_STOPS = new Set([
-    "Note", "Notes", "Scoring", "Interaction",
-    "Explanation", "Example", "Examples",
-  ])
-  let i = 0
-
-  while (i < lines.length) {
-    const trimmed = lines[i].trim()
-
-    if (trimmed === "Input") {
-      i++
-      const inputLines = []
-      while (i < lines.length && lines[i].trim() !== "Output") {
-        inputLines.push(lines[i])
-        i++
-      }
-      if (i < lines.length && lines[i].trim() === "Output") {
-        i++
-        const outputLines = []
-        while (
-          i < lines.length &&
-          lines[i].trim() !== "Input" &&
-          !SECTION_STOPS.has(lines[i].trim()) &&
-          !lines[i].trim().toLowerCase().startsWith("explanation")
-        ) {
-          outputLines.push(lines[i])
-          i++
-        }
-        const input  = inputLines.join("\n").trim()
-        const output = outputLines.join("\n").trim()
-        if (input || output) examples.push({ input, output })
-      }
-    } else {
-      i++
-    }
-  }
-
-  return examples
-}
-
-/**
- * Split the statement into a header block (before Examples/Input) and a body block.
- * We surface examples separately; the rest renders as plain pre-formatted text.
- */
-function splitStatement(statement) {
-  if (!statement) return { body: null, examples: [] }
-
-  const examples = parseExamples(statement)
-
-  // Strip the Example pairs from the body so they don't duplicate
-  let body = statement
-
-  // Remove trailing "Note / Notes" sections (they're low priority for now)
-  body = body.replace(/\n+(?:Note|Notes)\n[\s\S]*$/, "").trim()
-
-  // Remove everything from "Example" header onwards
-  body = body.replace(/\n+(?:Example|Examples)\n[\s\S]*$/, "").trim()
-
-  // Also collapse the raw Input/Output pairs that parseExamples already extracted
-  // (they appear after the statement body)
-  body = body.replace(/\n+(?:Input)\n[\s\S]*$/, "").trim()
-
-  return { body, examples }
+function splitStatement(problem) {
+  if (!problem || !problem.statement) return { body: null, examples: [] }
+  
+  // If backend provided examples, use them. Otherwise fallback to empty.
+  const examples = problem.examples || []
+  
+  // The statement is now clean HTML from the backend
+  return { body: problem.statement, examples }
 }
 
 // ── Components ───────────────────────────────────────────────────────────────
@@ -284,6 +214,18 @@ export default function ProblemView({ params }) {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatHistory])
+
+  // ── MathJax ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window !== "undefined" && !window.MathJax) {
+      const script = document.createElement("script")
+      script.src = "https://mathjax.codeforces.org/MathJax.js?config=TeX-AMS_HTML-full"
+      script.async = true
+      document.body.appendChild(script)
+    } else if (typeof window !== "undefined" && window.MathJax) {
+      window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub])
+    }
+  }, [activeLeftTab, problem])
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -479,9 +421,10 @@ export default function ProblemView({ params }) {
 
                 {/* Statement body */}
                 {hasStatement ? (
-                  <div className="text-sm text-[#e5e2e1] whitespace-pre-wrap leading-relaxed font-mono">
-                    {statementBody}
-                  </div>
+                  <div 
+                    className="text-sm text-[#e5e2e1] leading-relaxed problem-html-content"
+                    dangerouslySetInnerHTML={{ __html: statementBody }}
+                  />
                 ) : (
                   <div className="rounded-lg border border-[#1f1f1f] bg-[#0c0c0c] p-5">
                     <div className="flex items-start gap-3 mb-4">

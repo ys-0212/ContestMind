@@ -195,15 +195,50 @@ class ProblemService:
     def get_problem(self, problem_id: str) -> Optional[Problem]:
         normalized = self._normalize(problem_id)
         
+        problem = None
         if self.supabase_client:
             try:
                 resp = self.supabase_client.table("problems").select("*").eq("problem_id", normalized).execute()
                 if resp.data and len(resp.data) > 0:
-                    return self._problem_from_supabase_row(resp.data[0])
+                    problem = self._problem_from_supabase_row(resp.data[0])
             except Exception as e:
                 logger.error(f"Supabase problem fetch failed: {e}")
 
-        return self._problems_db.get(normalized) or self._build_from_cf_api(normalized)
+        if not problem:
+            problem = self._problems_db.get(normalized) or self._build_from_cf_api(normalized)
+            
+        if problem and not problem.statement:
+            from app.services.scraper_service import ScraperService
+            scraped = ScraperService.scrape_problem(normalized)
+            if scraped:
+                html_statement, examples = scraped
+                problem = problem.model_copy(update={
+                    "statement": html_statement,
+                    "examples": [ProblemExample(**ex) for ex in examples],
+                    "has_statement": True
+                })
+                # Cache it back to Supabase
+                if self.supabase_client:
+                    try:
+                        self.supabase_client.table("problems").upsert({
+                            "problem_id": problem.problem_id,
+                            "title": problem.title,
+                            "rating": problem.rating,
+                            "tags": problem.tags,
+                            "url": problem.url,
+                            "statement": problem.statement,
+                            "examples": examples,
+                            "has_statement": True,
+                            "source": "codeforces"
+                        }).execute()
+                    except Exception as e:
+                        logger.error(f"Failed to cache scraped problem {normalized} to Supabase: {e}")
+                
+                # Update local DB if needed
+                if normalized in self._problems_db:
+                    self._problems_db[normalized] = problem
+                    
+        return problem
 
     def get_all_problems(
         self,

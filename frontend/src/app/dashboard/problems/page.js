@@ -29,16 +29,14 @@ export default function ProblemsPage() {
   const [filterMinRating, setFilterMinRating] = useState("")
   const [filterMaxRating, setFilterMaxRating] = useState("")
   const [filterTags, setFilterTags] = useState([])
-  const [filterScrapedOnly, setFilterScrapedOnly] = useState(false)
 
   const activeFilterCount = (filterMinRating ? 1 : 0) + (filterMaxRating ? 1 : 0)
-    + filterTags.length + (filterScrapedOnly ? 1 : 0)
+    + filterTags.length
 
   const clearFilters = () => {
     setFilterMinRating("")
     setFilterMaxRating("")
     setFilterTags([])
-    setFilterScrapedOnly(false)
   }
 
   const toggleTag = (tag) =>
@@ -55,11 +53,10 @@ export default function ProblemsPage() {
     debouncedSearch.length >= 3 ? debouncedSearch : null
   )
 
-  // Dynamic POTD: prefer scraped problems in 1300–1800 range
+  // Dynamic POTD: prefer problems in 1300–1800 range
   const potdProblem = useMemo(() => {
-    const scraped  = baseProblems.filter(p => p.has_statement && p.rating >= 1300 && p.rating <= 1800)
     const fallback = baseProblems.filter(p => p.rating && p.rating >= 1300 && p.rating <= 1800)
-    const candidates = scraped.length > 0 ? scraped : fallback
+    const candidates = fallback.length > 0 ? fallback : baseProblems
     if (!candidates.length) return null
     const dayIdx = Math.floor(Date.now() / 86400000)
     return candidates[dayIdx % candidates.length]
@@ -74,7 +71,6 @@ export default function ProblemsPage() {
     let result = problems
     if (filterMinRating) result = result.filter(p => p.rating && p.rating >= Number(filterMinRating))
     if (filterMaxRating) result = result.filter(p => p.rating && p.rating <= Number(filterMaxRating))
-    if (filterScrapedOnly) result = result.filter(p => p.has_statement)
     if (filterTags.length > 0) {
       result = result.filter(p => filterTags.every(tag => (p.tags || []).includes(tag)))
     }
@@ -266,15 +262,7 @@ export default function ProblemsPage() {
               />
             </div>
             <div className="flex items-end">
-              <label className="flex items-center gap-2 cursor-pointer pb-1.5">
-                <input
-                  type="checkbox"
-                  checked={filterScrapedOnly}
-                  onChange={e => setFilterScrapedOnly(e.target.checked)}
-                  className="w-4 h-4 accent-[#10b981] cursor-pointer rounded"
-                />
-                <span className="text-sm text-[#a1a1aa]">Full statement only</span>
-              </label>
+              {/* Removed Full statement only filter since problems are loaded on demand */}
             </div>
           </div>
 
