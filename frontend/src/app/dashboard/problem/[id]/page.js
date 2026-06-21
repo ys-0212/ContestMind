@@ -339,7 +339,7 @@ export default function ProblemView({ params }) {
 
   const probabilityPct = probabilityData?.probability_percent ?? null
   const { body: statementBody, examples: parsedExamples } = problem?.statement
-    ? splitStatement(problem.statement)
+    ? splitStatement(problem)
     : { body: null, examples: [] }
 
   const hasStatement = Boolean(problem?.statement)
@@ -422,7 +422,7 @@ export default function ProblemView({ params }) {
                 {/* Statement body */}
                 {hasStatement ? (
                   <div 
-                    className="text-sm text-[#e5e2e1] leading-relaxed problem-html-content"
+                    className="text-sm text-[#e5e2e1] leading-relaxed problem-html-content whitespace-pre-wrap"
                     dangerouslySetInnerHTML={{ __html: statementBody }}
                   />
                 ) : (
