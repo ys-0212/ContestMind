@@ -24,3 +24,4 @@ gunicorn
 # Web Scraping
 beautifulsoup4
 lxml
+cloudscraper
