@@ -185,9 +185,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <p className="text-center text-xs text-[#52525b] mt-5">
-              MVP: sessions stored locally. Real Supabase auth coming soon.
-            </p>
           </CardContent>
         </Card>
       </div>
