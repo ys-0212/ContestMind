@@ -117,7 +117,6 @@ export default function ProblemsPage() {
           // Apply active filters to semantic results too
           if (filterMinRating && r.rating && r.rating < Number(filterMinRating)) return false
           if (filterMaxRating && r.rating && r.rating > Number(filterMaxRating)) return false
-          if (filterScrapedOnly && !r.has_statement) return false
           if (filterTags.length > 0 && !filterTags.every(tag => (r.tags || []).includes(tag))) return false
           return true
         })
@@ -128,7 +127,7 @@ export default function ProblemsPage() {
     return clientFiltered
   }, [
     baseProblems, lowerSearch, debouncedSearch, searchResults, showAll,
-    filterMinRating, filterMaxRating, filterScrapedOnly, filterTags, searchTerm,
+    filterMinRating, filterMaxRating, filterTags, searchTerm,
   ])
 
   const getDiffBadge = (rating) => {
