@@ -14,6 +14,9 @@ from collections import defaultdict
 from app.api.api import api_router
 from app.core.config import settings
 
+import torch
+torch.set_num_threads(1) # CRITICAL: Saves massive memory on CPU-only free tier deployments
+
 # Configure logging
 logging.basicConfig(level=settings.LOGGING_LEVEL)
 logger = logging.getLogger(__name__)
