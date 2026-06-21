@@ -1,7 +1,7 @@
 import logging
 from typing import List, Dict, Any
 
-from app.services.chroma_service import ChromaService
+from app.services.vector_service import VectorService
 from app.services.llm.base import BaseLLMService
 from app.schemas.chat import ChatRequest, ChatResponse
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 from supabase import Client
 
 class ChatService:
-    def __init__(self, chroma_service: ChromaService, llm_service: BaseLLMService, supabase_client: Client | None = None):
+    def __init__(self, chroma_service: VectorService, llm_service: BaseLLMService, supabase_client: Client | None = None):
         self.chroma_service = chroma_service
         self.llm_service = llm_service
         self.supabase = supabase_client

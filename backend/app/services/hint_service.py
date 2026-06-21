@@ -11,8 +11,7 @@ from app.schemas.llm import HintRequest, HintResponse
 
 logger = logging.getLogger(__name__)
 
-from app.services.chroma_service import ChromaService
-
+from app.services.vector_service import VectorService
 
 def _prev_block(previous_hints: List[str]) -> str:
     """Build a 'previous hints' context block for the prompt."""
@@ -31,7 +30,7 @@ class HintService:
         self,
         problem_service: ProblemService = None,
         llm_service: BaseLLMService = None,
-        chroma_service: ChromaService = None,
+        chroma_service: VectorService = None,
     ):
         self.problem_service = problem_service
         self.llm_service = llm_service

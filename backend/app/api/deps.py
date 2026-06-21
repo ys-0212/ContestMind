@@ -5,7 +5,7 @@ Singleton instances are created once at startup and reused across all requests.
 The LLM provider is selected via LLM_PROVIDER in config / .env.
 """
 
-from app.services.chroma_service import ChromaService
+from app.services.vector_service import VectorService
 from app.services.retrieval_service import RetrievalService
 from app.services.llm.factory import create_llm_service
 from app.services.llm.base import BaseLLMService
@@ -28,8 +28,8 @@ if settings.SUPABASE_URL and settings.SUPABASE_KEY:
     supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 # Singletons
-chroma_service_instance = ChromaService()
-retrieval_service_instance = RetrievalService(chroma_service=chroma_service_instance)
+vector_service_instance = VectorService(supabase_client=supabase_client)
+retrieval_service_instance = RetrievalService(chroma_service=vector_service_instance)
 llm_service_instance: BaseLLMService = create_llm_service()
 rag_service_instance = RAGService(
     retrieval_service=retrieval_service_instance,
@@ -46,7 +46,7 @@ attempt_service_instance = AttemptService()
 hint_service_instance = HintService(
     problem_service=problem_service_instance,
     llm_service=llm_service_instance,
-    chroma_service=chroma_service_instance,
+    chroma_service=vector_service_instance,
 )
 profile_service_instance = ProfileService(
     codeforces_service=codeforces_service_instance,
@@ -73,7 +73,7 @@ contest_intelligence_service_instance = ContestIntelligenceService(
 from app.services.chat_service import ChatService
 
 chat_service_instance = ChatService(
-    chroma_service=chroma_service_instance,
+    chroma_service=vector_service_instance,
     llm_service=llm_service_instance,
     supabase_client=supabase_client
 )
@@ -81,8 +81,8 @@ chat_service_instance = ChatService(
 def get_chat_service() -> ChatService:
     return chat_service_instance
 
-def get_chroma_service() -> ChromaService:
-    return chroma_service_instance
+def get_chroma_service() -> VectorService:
+    return vector_service_instance
 
 def get_retrieval_service() -> RetrievalService:
     return retrieval_service_instance

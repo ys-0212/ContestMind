@@ -4,13 +4,13 @@ import time
 from typing import List
 
 from app.core.utils import ttl_cache
-from .chroma_service import ChromaService
+from app.services.vector_service import VectorService
 from ..schemas.retrieval import SearchResult
 
 logger = logging.getLogger(__name__)
 
 class RetrievalService:
-    def __init__(self, chroma_service: ChromaService):
+    def __init__(self, chroma_service: VectorService):
         self.chroma_service = chroma_service
 
     def _format_results(self, raw_results: List[dict]) -> List[SearchResult]:
