@@ -106,11 +106,15 @@ def main():
 
                 # Chunk only if there is substantial body content; otherwise keep as single doc.
                 if body_parts:
-                    text_chunks = chunk_text(full_text)
+                    body_text = "\n\n".join(body_parts)
+                    text_chunks = chunk_text(body_text)
                     if not text_chunks:
-                        text_chunks = [full_text]
+                        text_chunks = [body_text]
+                    
+                    # Prepend header to EVERY chunk
+                    text_chunks = [header + "\n\n" + c for c in text_chunks]
                 else:
-                    text_chunks = [full_text]
+                    text_chunks = [header]
 
                 for i, chunk_content in enumerate(text_chunks):
                     chunk_id = f"{problem.problem_id}::{i}"

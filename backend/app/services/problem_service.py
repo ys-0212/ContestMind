@@ -6,6 +6,7 @@ from typing import Optional, Dict, List
 
 from app.core.config import settings
 from app.schemas.problem import Problem, ProblemExample
+from supabase import Client
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +17,6 @@ _SECTION_STOPS = {"Note", "Notes", "Scoring", "Interaction", "Explanation", "Exa
 # ── Example parser ────────────────────────────────────────────────────────────
 
 def _parse_examples(statement: Optional[str]) -> List[ProblemExample]:
-    """
-    Extract Input/Output example pairs from a scraped Codeforces statement.
-
-    The scraper's `.get_text(separator="\\n")` produces sections like:
-        …statement body…
-        Input
-        {example 1 input}
-        Output
-        {example 1 output}
-        Input
-        {example 2 input}
-        …
-    """
     if not statement:
         return []
 
@@ -69,11 +57,15 @@ def _parse_examples(statement: Optional[str]) -> List[ProblemExample]:
 # ── Service ───────────────────────────────────────────────────────────────────
 
 class ProblemService:
-    def __init__(self):
+    def __init__(self, supabase_client: Optional[Client] = None):
+        self.supabase_client = supabase_client
         self._problems_db: Dict[str, Problem] = {}
         self._cf_api_problems: Optional[List[dict]] = None
         self._cf_cache_file = settings.RAW_DATA_DIR / "codeforces" / "problemset_problems.json"
-        self._load_scraped_problems()
+        
+        # We only load JSONL if Supabase is not provided or it fails
+        if not self.supabase_client:
+            self._load_scraped_problems()
 
     # ── Normalisation ─────────────────────────────────────────────────────────
 
@@ -102,7 +94,6 @@ class ProblemService:
                     try:
                         data = json.loads(line)
                         problem = Problem(**data)
-                        # Parse examples if not already stored
                         if not problem.examples and problem.statement:
                             problem = problem.model_copy(
                                 update={
@@ -179,15 +170,39 @@ class ProblemService:
                 )
         return None
 
+    def _problem_from_supabase_row(self, row: dict) -> Problem:
+        examples_data = row.get("examples")
+        if isinstance(examples_data, str):
+            examples_data = json.loads(examples_data)
+        
+        examples = [ProblemExample(**ex) for ex in (examples_data or [])]
+        
+        return Problem(
+            problem_id=row.get("problem_id"),
+            title=row.get("title", ""),
+            rating=row.get("rating"),
+            tags=row.get("tags") or [],
+            url=row.get("url", ""),
+            statement=row.get("statement"),
+            editorial=row.get("editorial"),
+            source=row.get("source", "codeforces"),
+            examples=examples,
+            has_statement=row.get("has_statement", False)
+        )
+
     # ── Public API ────────────────────────────────────────────────────────────
 
     def get_problem(self, problem_id: str) -> Optional[Problem]:
-        """
-        Retrieve a problem by ID.
-        Priority: local scraped DB (has statement) → CF API cache (metadata only).
-        IDs are normalized to UPPERCASE before lookup.
-        """
         normalized = self._normalize(problem_id)
+        
+        if self.supabase_client:
+            try:
+                resp = self.supabase_client.table("problems").select("*").eq("problem_id", normalized).execute()
+                if resp.data and len(resp.data) > 0:
+                    return self._problem_from_supabase_row(resp.data[0])
+            except Exception as e:
+                logger.error(f"Supabase problem fetch failed: {e}")
+
         return self._problems_db.get(normalized) or self._build_from_cf_api(normalized)
 
     def get_all_problems(
@@ -197,22 +212,36 @@ class ProblemService:
         limit: int = 1000,
         shuffle: bool = False,
     ) -> List[Problem]:
-        """
-        Return all known problems from both scraped DB and CF API cache.
-        Used by recommendation and analytics services.
-        Optionally filters by rating range and shuffles for random sampling.
-        """
         seen: set = set()
         result: List[Problem] = []
 
-        # 1. Scraped DB (highest quality — has statement/editorial)
-        for problem in self._problems_db.values():
-            if problem.rating and not (min_rating <= problem.rating <= max_rating):
-                continue
-            seen.add(problem.problem_id)
-            result.append(problem)
+        if self.supabase_client:
+            try:
+                query = self.supabase_client.table("problems").select("*")
+                if min_rating is not None:
+                    query = query.gte("rating", min_rating)
+                if max_rating is not None:
+                    query = query.lte("rating", max_rating)
+                
+                # We fetch a larger pool and shuffle manually if needed, or just let Supabase return all matching
+                resp = query.execute()
+                for row in resp.data or []:
+                    p = self._problem_from_supabase_row(row)
+                    seen.add(p.problem_id)
+                    result.append(p)
+            except Exception as e:
+                logger.error(f"Supabase problems fetch failed: {e}")
+                # Fall through to local logic
 
-        # 2. CF API cache (metadata only)
+        # Fallback to local DB
+        if not self.supabase_client or not result:
+            for problem in self._problems_db.values():
+                if problem.rating and not (min_rating <= problem.rating <= max_rating):
+                    continue
+                seen.add(problem.problem_id)
+                result.append(problem)
+
+        # CF API cache (metadata only)
         for p in self._get_cf_api_problems():
             contest_id = str(p.get("contestId", ""))
             index = str(p.get("index", ""))
@@ -240,8 +269,15 @@ class ProblemService:
         return result[:limit]
 
     def get_available_ids(self) -> List[str]:
-        """Return all known problem IDs (scraped + CF cache)."""
-        ids = set(self._problems_db.keys())
+        ids = set()
+        if self.supabase_client:
+            try:
+                resp = self.supabase_client.table("problems").select("problem_id").execute()
+                ids.update([row["problem_id"] for row in resp.data])
+            except Exception as e:
+                pass
+
+        ids.update(self._problems_db.keys())
         for p in self._get_cf_api_problems():
             c = str(p.get("contestId", ""))
             i = str(p.get("index", ""))

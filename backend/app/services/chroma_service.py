@@ -4,6 +4,7 @@ Service to manage all interactions with ChromaDB for vector storage and retrieva
 import chromadb
 import logging
 from typing import List, Dict, Any
+from sentence_transformers import SentenceTransformer
 
 from app.core.config import settings
 
@@ -20,6 +21,7 @@ class ChromaService:
             self.collection = self.client.get_or_create_collection(
                 name=settings.CHROMA_COLLECTION_NAME
             )
+            self.embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
             logger.info("ChromaDB client initialized and collection is ready.")
             logger.info(f"ChromaDB is persisting data to: {settings.CHROMA_PERSIST_DIR}")
         except Exception as e:
@@ -40,13 +42,12 @@ class ChromaService:
             return
 
         try:
-            # ChromaDB's default embedding function will be used if embeddings are not provided.
-            # For sentence-transformers, we generate embeddings first and then add them,
-            # but for simplicity here, we let Chroma handle it if not passed.
-            # The `build_vector_index` script will handle embedding generation explicitly.
+            # Generate embeddings explicitly to match ingest logic exactly
+            embeddings = self.embedding_model.encode(documents, show_progress_bar=False).tolist()
             self.collection.add(
                 ids=ids,
                 documents=documents,
+                embeddings=embeddings,
                 metadatas=metadatas
             )
             logger.info(f"Successfully added {len(ids)} documents to the collection.")
@@ -66,8 +67,10 @@ class ChromaService:
             retrieved document, its metadata, and distance score.
         """
         try:
+            # Generate explicit embeddings to guarantee match with index
+            query_embedding = self.embedding_model.encode([query_text])[0].tolist()
             results = self.collection.query(
-                query_texts=[query_text],
+                query_embeddings=[query_embedding],
                 n_results=top_k,
             )
             

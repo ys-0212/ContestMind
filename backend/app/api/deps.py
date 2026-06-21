@@ -35,7 +35,7 @@ rag_service_instance = RAGService(
     retrieval_service=retrieval_service_instance,
     llm_service=llm_service_instance,
 )
-problem_service_instance = ProblemService()
+problem_service_instance = ProblemService(supabase_client=supabase_client)
 
 codeforces_service_instance = CodeforcesService()
 analytics_service_instance = AnalyticsService(

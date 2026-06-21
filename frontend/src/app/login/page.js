@@ -35,7 +35,7 @@ export default function LoginPage() {
     return ""
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
 
@@ -43,9 +43,35 @@ export default function LoginPage() {
     if (msg) { setError(msg); return }
 
     setIsLoading(true)
-    // MVP: localStorage session — replace with Supabase signUp/signIn when ready
-    localStorage.setItem("cf_handle", handle.trim())
-    setTimeout(() => router.push("/dashboard"), 500)
+    
+    try {
+      const { createClient } = await import('@/lib/supabase')
+      const supabase = createClient()
+
+      if (!isLogin) {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { codeforces_handle: handle.trim() }
+          }
+        })
+        if (signUpError) throw signUpError
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (signInError) throw signInError
+      }
+      
+      // The middleware and useAuth hook will handle the redirect and state
+      router.push("/dashboard")
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const switchMode = (login) => {

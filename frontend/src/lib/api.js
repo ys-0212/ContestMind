@@ -1,19 +1,32 @@
+import { createClient } from './supabase'
+
 const ENV_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
 const API_BASE_URL = ENV_URL.endsWith('/api/v1') ? ENV_URL : `${ENV_URL}/api/v1`
 
+const supabase = createClient()
+
 export const apiClient = {
+  async getAuthHeaders() {
+    const { data: { session } } = await supabase.auth.getSession()
+    const headers = { 'Content-Type': 'application/json' }
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`
+    }
+    return headers
+  },
+
   async get(endpoint) {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: { 'Content-Type': 'application/json' },
-    })
+    const headers = await this.getAuthHeaders()
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, { headers })
     if (!res.ok) throw new Error(`API Error ${res.status}: ${res.statusText}`)
     return res.json()
   },
 
   async post(endpoint, data) {
+    const headers = await this.getAuthHeaders()
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(data),
     })
     if (!res.ok) throw new Error(`API Error ${res.status}: ${res.statusText}`)
