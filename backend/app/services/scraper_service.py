@@ -33,7 +33,7 @@ class ScraperService:
             logger.error(f"Failed to fetch CF problem {problem_id}: {e}")
             return None
             
-        soup = BeautifulSoup(response.text, "lxml")
+        soup = BeautifulSoup(response.text, "html.parser")
         
         statement_div = soup.find("div", class_="problem-statement")
         if not statement_div:

@@ -22,7 +22,7 @@ def _cf_url(problem_id: str) -> str:
 def get_available_problems(
     min_rating: int = Query(800,  ge=0,    description="Minimum problem rating"),
     max_rating: int = Query(3500, le=5000, description="Maximum problem rating"),
-    limit:      int = Query(500,  ge=1, le=5000, description="Max problems to return"),
+    limit:      int = Query(15000,  ge=1, le=15000, description="Max problems to return"),
     problem_service: ProblemService = Depends(get_problem_service),
 ):
     """

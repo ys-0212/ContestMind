@@ -47,7 +47,7 @@ export default function ProblemsPage() {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  const { problems: baseProblems, count: totalCount, isLoading: loadingAll } = useAvailableProblems(0, 5000, 500)
+  const { problems: baseProblems, count: totalCount, isLoading: loadingAll } = useAvailableProblems(0, 5000, 15000)
 
   const { searchResults, isLoading: loadingSearch } = useSearch(
     debouncedSearch.length >= 3 ? debouncedSearch : null

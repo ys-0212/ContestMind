@@ -83,7 +83,7 @@ export function useRecommendations(handle, count = 5) {
   return { recommendations: data?.recommendations || [], error, isLoading, mutate }
 }
 
-export function useAvailableProblems(minRating = 0, maxRating = 5000, limit = 500) {
+export function useAvailableProblems(minRating = 0, maxRating = 5000, limit = 15000) {
   const { data, error, isLoading, mutate } = useSWR(
     `available-problems-${minRating}-${maxRating}-${limit}`,
     () => apiClient.get(`/problems/available?min_rating=${minRating}&max_rating=${maxRating}&limit=${limit}`),
