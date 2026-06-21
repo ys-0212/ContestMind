@@ -18,7 +18,7 @@ class VectorService:
             self.supabase = supabase_client
             # Initialize fastembed TextEmbedding instead of sentence-transformers
             # fastembed automatically loads the ONNX version of the model, which uses ~50MB RAM instead of PyTorch's 400MB!
-            self.embedding_model = TextEmbedding(model_name=f"sentence-transformers/{settings.EMBEDDING_MODEL_NAME}")
+            self.embedding_model = TextEmbedding(model_name=settings.EMBEDDING_MODEL_NAME)
             logger.info("VectorService initialized with fastembed and Supabase pgvector.")
         except Exception as e:
             logger.error(f"Failed to initialize VectorService: {e}", exc_info=True)
