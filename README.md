@@ -6,15 +6,22 @@
   </p>
   <p align="center">
     <a href="#-features">Features</a> •
-    <a href="#-system-architecture">Architecture</a> •
+    <a href="#-architecture">Architecture</a> •
     <a href="#-getting-started">Setup</a> •
     <a href="#%EF%B8%8F-usage">Usage</a>
+  </p>
+  <p align="center">
+    <img src="https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js" alt="Next.js" />
+    <img src="https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/Supabase-Database-3ECF8E?style=flat-square&logo=supabase" alt="Supabase" />
+    <img src="https://img.shields.io/badge/Tailwind-v4-38B2AC?style=flat-square&logo=tailwind-css" alt="Tailwind CSS" />
+    <img src="https://img.shields.io/badge/Machine%20Learning-Stacking%20Ensemble-FF6F00?style=flat-square&logo=scikit-learn" alt="Machine Learning" />
   </p>
 </div>
 
 ---
 
-## Introduction
+## 🌟 Introduction
 
 **ContestMind** is not just another coding dashboard—it is an intelligent, personalized learning and reasoning platform built for competitive programmers. By integrating directly with Codeforces, ContestMind analyzes your past submissions, identifies cognitive blockers, and provides a highly contextual AI coach to help you break through your plateau.
 
@@ -22,52 +29,61 @@ Stop grinding randomly. Start practicing intelligently.
 
 ---
 
-## Features
+## ✨ Features
 
 | Feature | Description | Icon |
 | :--- | :--- | :---: |
-| **Progressive Coaching** | Tag-based, step-by-step hints (Constraint Analysis, Key Observations) designed to guide you without spoiling the solution. | 🔓 |
-| **AI Contextual Chat** | An AI coach that sees your code, runtime errors, and expected outputs in real-time to debug alongside you. | 💬 |
-| **Smart Recommendations** | Personalized problem sets dynamically generated based on your Codeforces rating, comfort zone, and tag weaknesses. | 🎯 |
-| **Holistic Analytics** | Deep insights into your performance, including rating trajectories, difficulty distributions, and cognitive blockers. | 📊 |
 | **Integrated IDE Workspace** | An immersive split-pane workspace with built-in code execution, custom I/O testing, and seamless Codeforces integration. | 💻 |
+| **Live Problem Scraper** | Instantly fetches full problem statements and test cases from Codeforces on demand, rendered perfectly with **MathJax** and rich HTML formatting. | 🕸️ |
+| **AI Contextual Chat** | An AI coach that sees your code, runtime errors, and expected outputs in real-time to debug alongside you. | 💬 |
+| **Progressive Coaching** | Tag-based, step-by-step hints (Constraint Analysis, Key Observations) designed to guide you without spoiling the solution. | 🔓 |
+| **Smart Recommendations** | Personalized problem sets dynamically generated based on your Codeforces rating, comfort zone, and tag weaknesses. | 🎯 |
+| **Semantic Search (RAG)** | Need a problem about "finding the shortest path on a grid"? Ask the semantic search engine powered by ChromaDB. | 🔍 |
+| **Holistic Analytics** | Deep insights into your performance, including rating trajectories, difficulty distributions, and cognitive blockers. | 📊 |
 
 ---
 
-## System Architecture
+## 🏗️ Architecture
 
 ContestMind is built using a modern, scalable, and fully decoupled architecture.
+
+```mermaid
+graph TD
+    UI[Frontend: Next.js 15, Tailwind v4] -->|REST API| API[Backend: FastAPI]
+    API -->|Problem Stats & Submissions| CF[Codeforces API]
+    API -->|Live HTML Scrape| CF_Web[Codeforces Web]
+    API -->|Store User Profiles & Cached Problems| DB[(Supabase PostgreSQL)]
+    API -->|Vector Search| Chroma[(ChromaDB)]
+    API -->|Predictive Probabilities| ML[Solve Probability Engine]
+    API -->|Real-time Code Execution| CE[Piston Engine]
+    API -->|Coaching & Hint Generation| LLM[LLM API]
+```
 
 ### **Frontend (Next.js 15)**
 - **Framework**: Next.js App Router (React 19)
 - **Styling**: Tailwind CSS v4, Framer Motion for micro-animations
 - **State & Data Fetching**: SWR for intelligent, deduped client-side caching
 - **UI Components**: Radix UI primitives, Lucide Icons, Recharts for analytics
+- **Rendering**: Dynamic HTML/MathJax injection for 1:1 Codeforces problem rendering
 
 ### **Backend (FastAPI)**
 - **Framework**: Python FastAPI
-- **Database**: Supabase (PostgreSQL) for user histories and attempts
+- **Database**: Supabase (PostgreSQL) for user histories, attempts, and cached scraped problems
 - **Vector DB**: ChromaDB for Retrieval-Augmented Generation (RAG) and semantic problem search
-- **Integrations**: Codeforces API, external Code Execution Engines (Piston), LLM APIs
+- **Scraping**: `beautifulsoup4` for real-time problem statement fetching
+- **Integrations**: Codeforces API, Piston API (Code Execution), LLM APIs
 
 ### **ML — Solve Probability Engine**
-
 A stacking ensemble model predicts each user's probability of solving any given problem, powering both the per-problem probability bar and the recommendation ranking.
 
-| Component | Detail |
-| :--- | :--- |
-| **Architecture** | 3-model Stacking Ensemble with Logistic Regression meta-learner |
-| **Base learners** | XGBoost (200 trees, depth 4) · LightGBM (200 trees, 31 leaves) · MLP (128→64→32, Adam, early stopping) |
-| **Meta-learner** | Logistic Regression on 5-fold out-of-fold `predict_proba` outputs |
-| **Features** | 15 engineered features: rating gap, Elo baseline, experience tier, difficulty tier, stretch-problem flag, comfort-zone distance, solve-rate proxy, rating volatility, and more |
-| **Training data** | 50,000 synthetic samples with realistic user/problem distributions |
-| **AUC-ROC** | **0.973** · Accuracy 91.7% · F1 89.2% · Brier Score 0.059 |
-| **Top features** | `is_stretch_problem` (36%) and `elo_baseline` (35%) dominate — confirming that domain priors are the strongest signal |
-| **Training script** | `backend/scripts/train_probability_model.py` — run once to regenerate `solve_prob_ensemble.joblib` |
+- **Architecture**: 3-model Stacking Ensemble with Logistic Regression meta-learner
+- **Base Learners**: XGBoost, LightGBM, MLP
+- **Features**: 15 engineered features including Elo baseline, experience tier, stretch-problem flag, and comfort-zone distance.
+- **Performance**: AUC-ROC **0.973** · Accuracy 91.7%
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
 Follow these instructions to get a copy of the project up and running on your local machine.
 
@@ -129,13 +145,13 @@ npm run dev
 
 ---
 
-## Usage
+## 🕹️ Usage
 
 1. **Dashboard Overview**: Navigate to `http://localhost:3000`. Set your Codeforces handle in the settings.
 2. **Review Analytics**: The coaching engine will analyze your Codeforces history and generate your personalized "Comfort Zone", identifying your weakest tags.
 3. **Pick a Problem**: Navigate to the Problem Set or use the "Recommended Problems" widget.
 4. **Enter the Workspace**:
-   - Read the problem statement on the left pane.
+   - Read the richly formatted problem statement (with MathJax equations) on the left pane.
    - Code your solution in the right pane.
    - If stuck, request **Progressive Hints** or ask the **AI Coach**.
    - Run your code against the scraped examples or custom I/O.
@@ -143,7 +159,7 @@ npm run dev
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Contributions make the open-source community an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
