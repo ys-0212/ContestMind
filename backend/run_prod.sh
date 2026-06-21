@@ -16,7 +16,7 @@ echo "Starting ContestMind Backend in Production Mode..."
 # --timeout 120: Allow 120 seconds for long ML model executions or LLM generation
 
 gunicorn app.main:app \
-    --workers 4 \
+    --workers 1 \
     --worker-class uvicorn.workers.UvicornWorker \
     --bind 0.0.0.0:8000 \
     --timeout 120 \
