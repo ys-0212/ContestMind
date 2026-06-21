@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     CHUNKS_DATA_DIR: Path = DATA_DIR / "chunks"
 
     # --- CORS Settings ---
-    BACKEND_CORS_ORIGINS: list[str] = [
+    BACKEND_CORS_ORIGINS: str | list[str] = [
         "http://localhost:3000",
         "http://localhost:8000",
     ]
