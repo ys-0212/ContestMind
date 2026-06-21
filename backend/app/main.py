@@ -25,24 +25,13 @@ app = FastAPI(
 )
 
 # Set up CORS middleware
-if settings.BACKEND_CORS_ORIGINS:
-    cors_origins = settings.BACKEND_CORS_ORIGINS
-    if isinstance(cors_origins, str):
-        if cors_origins.startswith("["):
-            import json
-            allow_origins = json.loads(cors_origins)
-        else:
-            allow_origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
-    else:
-        allow_origins = [str(origin) for origin in cors_origins]
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allow_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=".*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- 1. Centralized Error Handling ---
 @app.exception_handler(Exception)
