@@ -59,44 +59,57 @@
     background: linear-gradient(135deg, rgba(31,31,31,0.5) 0%, rgba(20,20,20,1) 100%);
   }
 
-  /* Codeforces Scraped HTML Styling */
-  .problem-html-content p {
-    margin-bottom: 1rem;
-    line-height: 1.6;
-  }
-  .problem-html-content .section-title {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--color-foreground);
-    margin-top: 1.5rem;
+  /* Problem content: shared styles for statement + editorial */
+  .problem-content p {
     margin-bottom: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    line-height: 1.7;
   }
-  .problem-html-content ul {
+  .problem-content ul,
+  .problem-content ol {
     list-style-type: disc;
     padding-left: 1.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
-  .problem-html-content li {
-    margin-bottom: 0.25rem;
+  .problem-content li {
+    margin-bottom: 0.2rem;
   }
-  .problem-html-content table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 1rem;
-  }
-  .problem-html-content th, .problem-html-content td {
+  .problem-content pre,
+  .problem-content code {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    background: #0c0c0c;
     border: 1px solid var(--color-border);
-    padding: 0.5rem;
-    text-align: center;
+    border-radius: 0.25rem;
+    padding: 0.1em 0.3em;
   }
-  .problem-html-content th {
-    background-color: var(--color-muted);
-  }
-  /* Fix MathJax overflow */
-  .MathJax_Display {
+  .problem-content pre {
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
     overflow-x: auto;
-    overflow-y: hidden;
+  }
+  /* Section header rendered by renderCFContent */
+  .cf-section-header {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-top: 1.5rem;
+    margin-bottom: 0.4rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  /* KaTeX: prevent whitespace-pre-wrap from breaking math layout */
+  .problem-content .katex,
+  .problem-content .katex-html {
+    white-space: normal;
+  }
+  .problem-content .katex-display {
+    margin: 0.5rem 0;
+    overflow-x: auto;
+    white-space: normal;
+  }
+  /* Codeforces HTML passthrough (scraped HTML structure) */
+  .problem-content .problem-statement p {
+    margin-bottom: 0.75rem;
   }
 }

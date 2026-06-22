@@ -1,5 +1,6 @@
 "use client"
-import React, { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import katex from "katex"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -52,52 +53,72 @@ function diffBadge(rating) {
   return "expert"
 }
 
-function formatCodeforcesText(text) {
-  if (!text) return "";
-  
-  let formatted = text;
-  
-  // Codeforces uses $$$...$$$ for inline math.
-  // We leave it exactly as is, because the Codeforces MathJax script is already
-  // configured to parse $$$ out of the box! Replacing it breaks their custom config.
-  
-  // Strip limits from body since we extract them
-  formatted = formatted.replace(/^(time limit per test)\s*\n(.*)/gim, "");
-  formatted = formatted.replace(/^(memory limit per test)\s*\n(.*)/gim, "");
-  formatted = formatted.replace(/^(input)\s*\n(standard input)/gim, "");
-  formatted = formatted.replace(/^(output)\s*\n(standard output)/gim, "");
-  
-  // Bold common section headers
-  const headers = ["Input", "Output", "Note", "Examples", "Example", "Constraints"];
-  headers.forEach(header => {
-    const regex = new RegExp(`^(${header}):?\\s*$`, "gim");
-    formatted = formatted.replace(regex, `<div class="text-lg font-bold text-[#10b981] mt-8 mb-4 border-b border-[#1f1f1f] pb-2">$1</div>`);
-  });
-  
-  return formatted;
+// Detect whether content is HTML (from live scraper) or plain text (from JSONL/Supabase)
+function _isHtml(text) {
+  return /<[a-z][\s\S]*>/i.test(text.substring(0, 500))
+}
+
+// Convert $$$...$$$  (Codeforces math) to KaTeX-rendered HTML.
+// Handles both plain-text JSONL content and raw HTML from the scraper.
+function renderCFContent(text) {
+  if (!text) return ""
+
+  let result = text
+
+  if (!_isHtml(text)) {
+    // ── Plain-text processing (JSONL / Supabase stored text) ──────────────
+    result = result
+      .replace(/^time limit per test\s*\n.*(\n|$)/gim, "")
+      .replace(/^memory limit per test\s*\n.*(\n|$)/gim, "")
+      .replace(/^input\s*\nstandard input(\n|$)/gim, "")
+      .replace(/^output\s*\nstandard output(\n|$)/gim, "")
+
+    // Wrap section headers so CSS can style them
+    const sectionHeaders = ["Input", "Output", "Note", "Notes", "Examples", "Example", "Constraints"]
+    sectionHeaders.forEach(h => {
+      result = result.replace(
+        new RegExp(`^(${h}):?\\s*$`, "gim"),
+        `<span class="cf-section-header">$1</span>`,
+      )
+    })
+  }
+
+  // ── Math: $$$...$$$  → KaTeX HTML ──────────────────────────────────────
+  // Display mode when the inner LaTeX contains a newline (block equations).
+  result = result.replace(/\$\$\$([^]*?)\$\$\$/g, (match, inner) => {
+    const latex = inner.trim()
+    const displayMode = inner.includes("\n")
+    try {
+      return katex.renderToString(latex, {
+        throwOnError: false,
+        displayMode,
+        output: "html",
+        strict: false,
+      })
+    } catch {
+      return match // fall back to raw text on KaTeX error
+    }
+  })
+
+  return result
 }
 
 function splitStatement(problem) {
   if (!problem || !problem.statement) return { body: null, examples: [], timeLimit: "2 seconds", memoryLimit: "256 megabytes" }
-  
+
   const examples = problem.examples || []
-  
-  // Extract limits before formatting
-  let timeLimit = "2 seconds";
-  let memoryLimit = "256 megabytes";
-  
-  const timeMatch = problem.statement.match(/time limit per test\s*\n(.*)/i);
-  if (timeMatch) timeLimit = timeMatch[1].trim();
-  
-  const memMatch = problem.statement.match(/memory limit per test\s*\n(.*)/i);
-  if (memMatch) memoryLimit = memMatch[1].trim();
-  
-  const formattedStatement = formatCodeforcesText(problem.statement);
-  if (problem.editorial) {
-    problem.editorial = formatCodeforcesText(problem.editorial);
-  }
-  
-  return { body: formattedStatement, examples, timeLimit, memoryLimit }
+
+  let timeLimit = "2 seconds"
+  let memoryLimit = "256 megabytes"
+
+  const timeMatch = problem.statement.match(/time limit per test\s*\n(.*)/i)
+  if (timeMatch) timeLimit = timeMatch[1].trim()
+
+  const memMatch = problem.statement.match(/memory limit per test\s*\n(.*)/i)
+  if (memMatch) memoryLimit = memMatch[1].trim()
+
+  // Return raw statement; renderCFContent is applied at render time
+  return { body: problem.statement, examples, timeLimit, memoryLimit }
 }
 
 // ── Components ───────────────────────────────────────────────────────────────
@@ -196,10 +217,10 @@ export default function ProblemView({ params }) {
   const [customInput,     setCustomInput]      = useState("")
   const [expectedOutput,  setExpectedOutput]   = useState("")
 
-  // Auto-parse examples and fill first one when problem loads
+  // Auto-fill first example when problem loads
   useEffect(() => {
-    if (problem?.statement) {
-      const { examples: ex } = splitStatement(problem.statement)
+    if (problem) {
+      const { examples: ex } = splitStatement(problem)
       setExamples(ex)
       if (ex.length > 0) {
         setCustomInput(ex[0].input)
@@ -244,19 +265,7 @@ export default function ProblemView({ params }) {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatHistory])
 
-  // ── MathJax ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const typeset = () => {
-        if (window.MathJax && window.MathJax.Hub) {
-          window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub]);
-        } else {
-          setTimeout(typeset, 100); // Retry until MathJax is loaded
-        }
-      };
-      setTimeout(typeset, 50);
-    }
-  }, [activeLeftTab, problem, chatHistory])
+  // (Math rendering is now handled synchronously via renderCFContent + KaTeX)
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -398,6 +407,10 @@ export default function ProblemView({ params }) {
     ? splitStatement(problem)
     : { body: null, examples: [], timeLimit: "2 seconds", memoryLimit: "256 megabytes" }
 
+  // Pre-render math — memoised so KaTeX only runs when content changes
+  const renderedStatement  = useMemo(() => renderCFContent(statementBody),      [statementBody])
+  const renderedEditorial  = useMemo(() => renderCFContent(problem?.editorial),  [problem?.editorial])
+
   const hasStatement = Boolean(problem?.statement)
 
   // ── Loading ───────────────────────────────────────────────────────────────
@@ -477,9 +490,9 @@ export default function ProblemView({ params }) {
 
                 {/* Statement body */}
                 {hasStatement ? (
-                  <div 
-                    className="text-sm text-[#e5e2e1] leading-relaxed problem-html-content whitespace-pre-wrap"
-                    dangerouslySetInnerHTML={{ __html: statementBody }}
+                  <div
+                    className="text-sm text-[#e5e2e1] leading-relaxed problem-content whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: renderedStatement }}
                   />
                 ) : (
                   <div className="rounded-lg border border-[#1f1f1f] bg-[#0c0c0c] p-5">
@@ -535,11 +548,14 @@ export default function ProblemView({ params }) {
             )}
 
             {activeLeftTab === "editorial" && (
-              <div className="text-sm text-[#e5e2e1] whitespace-pre-wrap leading-relaxed">
-                {problem.editorial || (
-                  <span className="text-[#a1a1aa]">No editorial available for this problem.</span>
-                )}
-              </div>
+              problem.editorial ? (
+                <div
+                  className="text-sm text-[#e5e2e1] problem-content whitespace-pre-wrap leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: renderedEditorial }}
+                />
+              ) : (
+                <span className="text-[#a1a1aa]">No editorial available for this problem.</span>
+              )
             )}
           </div>
         </div>
