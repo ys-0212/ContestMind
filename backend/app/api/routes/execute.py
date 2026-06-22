@@ -28,7 +28,7 @@ router = APIRouter()
 PISTON_URL = "https://emkc.org/api/v2/piston/execute"
 PISTON_TIMEOUT = 20.0   # seconds
 RUN_TIMEOUT_SEC = 10    # wall-clock limit for user code
-COMPILE_TIMEOUT_SEC = 30
+COMPILE_TIMEOUT_SEC = 45
 
 LANGUAGE_MAP = {
     "cpp":        ("cpp",        "*"),
@@ -142,7 +142,7 @@ def _run_cpp_local(tmpdir: str, code: str, stdin: str) -> ExecuteResponse:
     # Compile
     try:
         cr = subprocess.run(
-            ["g++", "-O2", "-std=c++17", "-o", exe, src],
+            ["g++", "-std=c++17", "-o", exe, src],
             capture_output=True, text=True, timeout=COMPILE_TIMEOUT_SEC,
         )
         if cr.returncode != 0:

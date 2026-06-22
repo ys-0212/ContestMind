@@ -55,9 +55,9 @@ export default function LandingPage() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="max-w-5xl text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-white via-[#e5e2e1] to-[#a1a1aa] mb-6"
         >
-          The unfair advantage for <br/>
+          Master Algorithmic <br/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#10b981] via-[#34d399] to-[#4cd7f6] relative">
-            Competitive Programmers
+            Problem Solving
           </span>
         </motion.h1>
         
@@ -209,29 +209,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
-      <section className="py-24 border-t border-[#1f1f1f] bg-[#0c0c0c]">
-        <div className="container mx-auto max-w-6xl px-6 text-center">
-          <h2 className="text-3xl font-bold mb-12">Built by competitive programmers.</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="p-6 rounded-xl border border-[#1f1f1f] bg-[#141414] text-left">
-                <div className="flex text-[#f59e0b] mb-4">
-                  <Star className="w-4 h-4 fill-current"/><Star className="w-4 h-4 fill-current"/><Star className="w-4 h-4 fill-current"/><Star className="w-4 h-4 fill-current"/><Star className="w-4 h-4 fill-current"/>
-                </div>
-                <p className="text-sm text-[#e5e2e1] italic mb-4">"ContestMind completely changed how I practice. I was stuck at Specialist for 8 months. The progressive hints pushed me to actually solve DP problems instead of reading editorials. I hit Expert last week."</p>
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-[#10b981] flex items-center justify-center font-bold text-[#002113]">User</div>
-                  <div>
-                    <div className="text-xs font-bold text-[#e5e2e1]">Codeforces User</div>
-                    <div className="text-[10px] text-[#a1a1aa]">Expert (1650)</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* CTA SECTION */}
       <section className="py-24 relative overflow-hidden">
@@ -246,45 +223,19 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-[#1f1f1f] bg-[#0c0c0c] py-16">
-        <div className="container mx-auto max-w-6xl px-6 grid grid-cols-2 md:grid-cols-4 gap-10">
-          <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center space-x-2 mb-4">
-              <BrainCircuit className="h-6 w-6 text-[#10b981]" />
-              <span className="font-bold text-xl text-[#e5e2e1]">ContestMind</span>
-            </div>
-            <p className="text-xs text-[#a1a1aa] leading-relaxed">
-              The elite AI-powered training platform for competitive programmers.
-            </p>
+      <footer className="border-t border-[#1f1f1f] bg-[#0c0c0c] py-12">
+        <div className="container mx-auto max-w-6xl px-6 flex flex-col md:flex-row justify-between items-center">
+          <div className="flex items-center space-x-2 mb-4 md:mb-0">
+            <BrainCircuit className="h-5 w-5 text-[#10b981]" />
+            <span className="font-bold text-lg text-[#e5e2e1]">ContestMind</span>
           </div>
           
-          <div>
-            <h4 className="font-semibold text-[#e5e2e1] mb-4">Platform</h4>
-            <ul className="space-y-2 text-sm text-[#a1a1aa]">
-              <li><a href="#" className="hover:text-[#10b981] transition-colors">Features</a></li>
-              <li><a href="#" className="hover:text-[#10b981] transition-colors">Methodology</a></li>
-              <li><a href="#" className="hover:text-[#10b981] transition-colors">Pricing</a></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold text-[#e5e2e1] mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm text-[#a1a1aa]">
-              <li><a href="#" className="hover:text-[#10b981] transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-[#10b981] transition-colors">Terms of Service</a></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-semibold text-[#e5e2e1] mb-4">Connect</h4>
-            <ul className="space-y-2 text-sm text-[#a1a1aa]">
-              <li><a href="#" className="hover:text-[#10b981] transition-colors">Twitter (X)</a></li>
-              <li><a href="#" className="hover:text-[#10b981] transition-colors">Discord</a></li>
-              <li><a href="#" className="hover:text-[#10b981] transition-colors">GitHub</a></li>
-            </ul>
+          <div className="flex space-x-6 text-sm text-[#a1a1aa]">
+            <a href="#" className="hover:text-[#10b981] transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-[#10b981] transition-colors">Terms of Service</a>
           </div>
         </div>
-        <div className="container mx-auto max-w-6xl px-6 mt-12 pt-8 border-t border-[#1f1f1f] flex flex-col md:flex-row justify-between items-center text-xs text-[#a1a1aa]">
+        <div className="container mx-auto max-w-6xl px-6 mt-8 flex flex-col md:flex-row justify-between items-center text-xs text-[#a1a1aa]/60">
           <p>© 2026 ContestMind. All rights reserved.</p>
           <p className="mt-2 md:mt-0">Not affiliated with Codeforces.</p>
         </div>

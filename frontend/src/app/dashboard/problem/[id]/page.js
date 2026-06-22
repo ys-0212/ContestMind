@@ -61,14 +61,43 @@ function diffBadge(rating) {
   return "expert"
 }
 
+function formatCodeforcesText(text) {
+  if (!text) return "";
+  
+  // If it's already HTML (contains divs/paragraphs), leave it alone
+  if (text.includes("<div") || text.includes("<p>")) {
+    return text;
+  }
+  
+  let formatted = text;
+  
+  // Replace MathJax $$$...$$$ with \(...\) for inline math
+  formatted = formatted.replace(/\$\$\$(.*?)\$\$\$/gs, "\\($1\\)");
+  
+  // Bold common section headers if they appear at the start of a line
+  const headers = ["Input", "Output", "Note", "Examples", "Example", "Constraints"];
+  headers.forEach(header => {
+    // Regex matches the header at the start of a line, optional trailing colon
+    const regex = new RegExp(`^(${header}):?\\s*$`, "gm");
+    formatted = formatted.replace(regex, `<br/><strong class="text-lg text-[#10b981] mt-6 mb-2 block">$1</strong>`);
+  });
+  
+  return formatted;
+}
+
 function splitStatement(problem) {
   if (!problem || !problem.statement) return { body: null, examples: [] }
   
   // If backend provided examples, use them. Otherwise fallback to empty.
   const examples = problem.examples || []
   
-  // The statement is now clean HTML from the backend
-  return { body: problem.statement, examples }
+  // Format the statement and editorial to handle raw text from old scraped data
+  const formattedStatement = formatCodeforcesText(problem.statement);
+  if (problem.editorial) {
+    problem.editorial = formatCodeforcesText(problem.editorial);
+  }
+  
+  return { body: formattedStatement, examples }
 }
 
 // ── Components ───────────────────────────────────────────────────────────────
