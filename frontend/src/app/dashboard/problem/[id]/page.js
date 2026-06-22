@@ -57,10 +57,9 @@ function formatCodeforcesText(text) {
   
   let formatted = text;
   
-  // Replace MathJax $$$...$$$ with standard $$...$$ or \(...\)
-  // Codeforces usually has $$$x$$$, we will replace it with \(x\) 
-  // Wait, standard MathJax Hub Typeset parses \( \). Let's explicitly trigger it.
-  formatted = formatted.replace(/\$\$\$(.*?)\$\$\$/gs, "\\($1\\)");
+  // Codeforces uses $$$...$$$ for inline math.
+  // We leave it exactly as is, because the Codeforces MathJax script is already
+  // configured to parse $$$ out of the box! Replacing it breaks their custom config.
   
   // Strip limits from body since we extract them
   formatted = formatted.replace(/^(time limit per test)\s*\n(.*)/gim, "");
@@ -247,11 +246,15 @@ export default function ProblemView({ params }) {
 
   // ── MathJax ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (typeof window !== "undefined" && window.MathJax) {
-      // Add a small timeout to allow React to flush the DOM innerHTML updates first
-      setTimeout(() => {
-        window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub])
-      }, 50)
+    if (typeof window !== "undefined") {
+      const typeset = () => {
+        if (window.MathJax && window.MathJax.Hub) {
+          window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub]);
+        } else {
+          setTimeout(typeset, 100); // Retry until MathJax is loaded
+        }
+      };
+      setTimeout(typeset, 50);
     }
   }, [activeLeftTab, problem, chatHistory])
 
