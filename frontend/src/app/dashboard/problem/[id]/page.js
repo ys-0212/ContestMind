@@ -7,6 +7,7 @@ import {
   Loader2, CheckCircle2, XCircle, AlertTriangle, Clock, ExternalLink, Copy,
 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
+import { motion } from "framer-motion"
 import { apiClient } from "@/lib/api"
 import { useProblem, useProbability } from "@/hooks/useAPI"
 
@@ -17,16 +18,6 @@ const LANGUAGES = {
     id: "cpp",
     ext: "cpp",
     template: `#include <bits/stdc++.h>\nusing namespace std;\n\nvoid solve() {\n    // your code here\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    int t;\n    cin >> t;\n    while (t--) solve();\n    return 0;\n}`,
-  },
-  "Python 3": {
-    id: "python",
-    ext: "py",
-    template: `import sys\ninput = sys.stdin.readline\n\ndef solve():\n    # your code here\n    pass\n\nt = int(input())\nfor _ in range(t):\n    solve()`,
-  },
-  "Java": {
-    id: "java",
-    ext: "java",
-    template: `import java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) throws IOException {\n        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n        int t = Integer.parseInt(br.readLine().trim());\n        while (t-- > 0) {\n            // your code here\n        }\n    }\n}`,
   },
 }
 
@@ -246,13 +237,25 @@ export default function ProblemView({ params }) {
 
   // ── MathJax ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (typeof window !== "undefined" && !window.MathJax) {
+    const typeset = () => {
+      if (typeof window !== "undefined" && window.MathJax) {
+        window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub])
+      }
+    }
+
+    if (typeof window !== "undefined" && !window.MathJax && !window.mathJaxLoading) {
+      window.mathJaxLoading = true
       const script = document.createElement("script")
       script.src = "https://mathjax.codeforces.org/MathJax.js?config=TeX-AMS_HTML-full"
       script.async = true
+      script.onload = () => {
+        window.mathJaxLoading = false
+        typeset()
+      }
       document.body.appendChild(script)
-    } else if (typeof window !== "undefined" && window.MathJax) {
-      window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub])
+    } else {
+      // Small timeout to ensure DOM update is complete
+      setTimeout(typeset, 50)
     }
   }, [activeLeftTab, problem])
 
@@ -300,20 +303,6 @@ export default function ProblemView({ params }) {
     }
   }
 
-  const handleCodeKeyDown = useCallback((e) => {
-    if (e.key === "Tab") {
-      e.preventDefault()
-      const ta = e.target
-      const start = ta.selectionStart
-      const end   = ta.selectionEnd
-      const newCode = code.substring(0, start) + "    " + code.substring(end)
-      setCode(newCode)
-      requestAnimationFrame(() => {
-        ta.selectionStart = ta.selectionEnd = start + 4
-      })
-    }
-  }, [code])
-
   const handleRun = async () => {
     if (isRunning) return
     setIsRunning(true)
@@ -328,9 +317,45 @@ export default function ProblemView({ params }) {
       })
       setRunResult(result)
     } catch (e) {
-      setRunResult({ stdout: "", stderr: String(e), exit_code: 1, status: "error" })
+      setRunResult({ stdout: "", stderr: `Execution Error: ${e.message}\n\n(This might happen if the compiler server is waking up. Please try again in 30 seconds!)`, exit_code: 1, status: "error" })
     } finally {
       setIsRunning(false)
+    }
+  }
+
+  const handleCodeKeyDown = (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault()
+      const ta = e.target
+      const start = ta.selectionStart
+      const end   = ta.selectionEnd
+      const newCode = code.substring(0, start) + "    " + code.substring(end)
+      setCode(newCode)
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + 4
+      })
+    } else if (e.key === "Enter") {
+      e.preventDefault()
+      const ta = e.target
+      const start = ta.selectionStart
+      const end   = ta.selectionEnd
+      
+      const beforeCursor = code.substring(0, start)
+      const lastLineStart = beforeCursor.lastIndexOf('\n') + 1
+      const currentLine = beforeCursor.substring(lastLineStart)
+      
+      const match = currentLine.match(/^\s*/)
+      const indent = match ? match[0] : ""
+      
+      const newCode = code.substring(0, start) + "\n" + indent + code.substring(end)
+      setCode(newCode)
+      
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + 1 + indent.length
+      })
+    } else if (e.key === "'" && e.ctrlKey) {
+      e.preventDefault()
+      handleRun()
     }
   }
 
@@ -349,6 +374,9 @@ export default function ProblemView({ params }) {
         problem_title: problem?.title ?? null,
         problem_tags: problem?.tags ?? null,
         problem_rating: problem?.rating ?? null,
+        problem_statement: statementBody ? statementBody.slice(0, 5000) : null,
+        hints: hints.filter(h => h && !h.startsWith("Hint unavailable")).join("\n\n"),
+        editorial: problem?.editorial ? problem.editorial.slice(0, 5000) : null,
         user_code: code ? code.slice(0, 2000) : null,
         run_status: runResult?.status ?? null,
         run_stdout: runResult?.stdout ? runResult.stdout.slice(0, 500) : null,
@@ -760,10 +788,18 @@ export default function ProblemView({ params }) {
       </div>
 
       {/* ==================== FLOATING CHAT ==================== */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-        {isChatOpen && (
-          <div className="mb-4 w-80 sm:w-96 h-[420px] bg-[#141414] border border-[#3c4a42] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200">
-            <div className="flex items-center justify-between bg-[#1a1a1a] px-4 py-3 border-b border-[#1f1f1f] shrink-0">
+      {isChatOpen && (
+        <motion.div 
+          drag
+          dragConstraints={{ left: 0, top: 0, right: typeof window !== 'undefined' ? window.innerWidth - 400 : 800, bottom: typeof window !== 'undefined' ? window.innerHeight - 500 : 800 }}
+          dragElastic={0.1}
+          dragMomentum={false}
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          className="fixed bottom-24 right-6 w-80 sm:w-96 h-[420px] bg-[#141414] border border-[#3c4a42] rounded-xl shadow-2xl flex flex-col overflow-hidden z-50 cursor-move min-w-[300px] min-h-[300px] max-w-[90vw] max-h-[90vh] resize"
+          style={{ position: 'fixed' }}
+        >
+          <div className="flex items-center justify-between bg-[#1a1a1a] px-4 py-3 border-b border-[#1f1f1f] shrink-0 active:cursor-grabbing">
               <div className="flex items-center gap-2">
                 <BrainCircuit className="h-5 w-5 text-[#4cd7f6]" />
                 <span className="font-semibold text-[#e5e2e1]">ContestMind AI</span>
@@ -820,9 +856,10 @@ export default function ProblemView({ params }) {
                 </button>
               </div>
             </div>
-          </div>
-        )}
+        </motion.div>
+      )}
 
+      <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={() => setIsChatOpen(v => !v)}
           className={`h-14 w-14 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-105 active:scale-95 ${isChatOpen ? "bg-[#3c4a42] text-[#e5e2e1]" : "bg-[#10b981] text-[#002113] hover:bg-[#059669]"}`}

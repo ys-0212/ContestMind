@@ -33,12 +33,6 @@ COMPILE_TIMEOUT_SEC = 45
 LANGUAGE_MAP = {
     "cpp":        ("cpp",        "*"),
     "c++":        ("cpp",        "*"),
-    "python":     ("python",     "*"),
-    "python3":    ("python",     "*"),
-    "py":         ("python",     "*"),
-    "java":       ("java",       "*"),
-    "javascript": ("javascript", "*"),
-    "js":         ("javascript", "*"),
 }
 
 SUPPORTED_LANGUAGES = sorted(set(LANGUAGE_MAP.keys()))
@@ -202,12 +196,8 @@ def _run_local(request: ExecuteRequest) -> ExecuteResponse:
     lang = request.language.lower()
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
-            if lang in ("python", "python3", "py"):
-                return _run_python_local(tmpdir, request.code, request.stdin)
-            elif lang in ("cpp", "c++"):
+            if lang in ("cpp", "c++"):
                 return _run_cpp_local(tmpdir, request.code, request.stdin)
-            elif lang == "java":
-                return _run_java_local(tmpdir, request.code, request.stdin)
             else:
                 return ExecuteResponse(
                     stderr=f"Language '{lang}' not supported for local execution",

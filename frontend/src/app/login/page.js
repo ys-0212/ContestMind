@@ -49,7 +49,7 @@ export default function LoginPage() {
       const supabase = createClient()
 
       if (!isLogin) {
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -57,6 +57,12 @@ export default function LoginPage() {
           }
         })
         if (signUpError) throw signUpError
+        
+        if (data?.user && !data?.session) {
+          setError("Account created! Please check your email to verify your account.")
+          setIsLoading(false)
+          return
+        }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,

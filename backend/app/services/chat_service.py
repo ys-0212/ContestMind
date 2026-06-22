@@ -89,6 +89,15 @@ class ChatService:
                 info.append(f"Tags: {', '.join(request.problem_tags)}")
             workspace_parts.append("\n".join(info))
 
+        if request.problem_statement:
+            workspace_parts.append(f"Problem Statement:\n```\n{request.problem_statement}\n```")
+
+        if request.hints:
+            workspace_parts.append(f"Revealed Hints:\n```\n{request.hints}\n```")
+
+        if request.editorial:
+            workspace_parts.append(f"Revealed Editorial:\n```\n{request.editorial}\n```")
+
         if request.user_code:
             workspace_parts.append(f"User's Current Code:\n```\n{request.user_code}\n```")
 
