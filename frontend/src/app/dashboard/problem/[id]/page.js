@@ -384,8 +384,9 @@ export default function ProblemView({ params }) {
     { role: "assistant", content: "I'm here to help! Ask me about TLE, WA, or paste your error." }
   ])
   const [isChatLoading, setIsChatLoading] = useState(false)
-  const chatEndRef     = useRef(null)
-  const greetingSetRef = useRef(false)
+  const chatEndRef      = useRef(null)
+  const chatTextareaRef = useRef(null)
+  const greetingSetRef  = useRef(false)
   const saveTimer      = useRef(null)
 
   // ── localStorage: load code per problem + language ─────────────────────────
@@ -526,6 +527,7 @@ export default function ProblemView({ params }) {
     const history = [...chatHistory, { role: "user", content: chatMessage }]
     setChatHistory(history)
     setChatMessage("")
+    if (chatTextareaRef.current) chatTextareaRef.current.style.height = "auto"
     setIsChatLoading(true)
     try {
       const h = typeof window !== "undefined" ? (localStorage.getItem("cf_handle") || "guest") : "guest"
@@ -1111,23 +1113,36 @@ export default function ProblemView({ params }) {
           </div>
 
           <div className="p-3 bg-[#0c0c0c] border-t border-[#1f1f1f] shrink-0">
-            <div className="relative">
-              <input
-                type="text"
+            <div className="flex items-end bg-[#141414] border border-[#3c4a42] rounded-xl transition-colors focus-within:border-[#4cd7f6]">
+              <textarea
+                ref={chatTextareaRef}
+                rows={1}
                 value={chatMessage}
-                onChange={e => setChatMessage(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSendChat()}
-                placeholder="Why did I get WA?"
-                className="w-full bg-[#141414] border border-[#3c4a42] rounded-full py-2.5 pl-4 pr-10 text-sm text-[#e5e2e1] focus:outline-none focus:border-[#4cd7f6]"
+                onChange={e => {
+                  setChatMessage(e.target.value)
+                  e.target.style.height = "auto"
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 240)}px`
+                }}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSendChat()
+                  }
+                }}
+                placeholder="Why did I get WA? Paste code, errors, or questions…"
+                className="flex-1 bg-transparent py-2.5 pl-4 pr-2 text-sm text-[#e5e2e1] focus:outline-none resize-none overflow-y-auto leading-relaxed"
+                style={{ maxHeight: "240px" }}
+                spellCheck={false}
               />
               <button
                 onClick={handleSendChat}
                 disabled={isChatLoading || !chatMessage.trim()}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-[#4cd7f6] hover:bg-[#38bdf8] text-[#002113] transition-colors disabled:opacity-50"
+                className="shrink-0 m-1.5 p-1.5 rounded-lg bg-[#4cd7f6] hover:bg-[#38bdf8] text-[#002113] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
               </button>
             </div>
+            <p className="text-[10px] text-[#52525b] mt-1.5 pl-1">Enter to send · Shift+Enter for new line</p>
           </div>
         </motion.div>
       )}

@@ -28,3 +28,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response_text: str = Field(..., description="The AI's generated response")
+    is_editorial_grounded: bool = Field(
+        default=False,
+        description="True when the response is derived from an official editorial rather than pure model reasoning"
+    )

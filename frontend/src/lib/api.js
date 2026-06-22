@@ -117,7 +117,7 @@ export const apiClient = {
     return this.post('/chat/ask', { query: fullQuery, handle })
   },
 
-  // --- Code Execution (Piston → local subprocess fallback) ---
+  // --- Code Execution (Wandbox → local subprocess fallback) ---
 
   async executeCode({ code, language, stdin = "", expected_output }) {
     const body = { code, language, stdin }

@@ -75,7 +75,8 @@ from app.services.chat_service import ChatService
 chat_service_instance = ChatService(
     chroma_service=vector_service_instance,
     llm_service=llm_service_instance,
-    supabase_client=supabase_client
+    supabase_client=supabase_client,
+    problem_service=problem_service_instance,
 )
 
 def get_chat_service() -> ChatService:

@@ -24,6 +24,50 @@ class VectorService:
             logger.error(f"Failed to initialize VectorService: {e}", exc_info=True)
             raise
 
+    def get_editorial_chunks(self, problem_id: str, title: str = "", top_k: int = 5) -> List[Dict[str, Any]]:
+        """
+        Retrieve indexed editorial/solution chunks for a specific problem.
+
+        Strategy:
+          1. Try a direct Supabase table query filtered by metadata problem_id (most efficient).
+          2. Fall back to a semantic search with high top_k + Python-side filter
+             (avoids assumptions about table structure if approach 1 fails).
+        """
+        if not self.supabase:
+            return []
+
+        # Approach 1: direct table query
+        try:
+            response = (
+                self.supabase
+                .table("document_chunks")
+                .select("id, document, metadata")
+                .filter("metadata->>'problem_id'", "eq", problem_id)
+                .limit(top_k)
+                .execute()
+            )
+            if response.data:
+                logger.info(f"Direct editorial lookup: {len(response.data)} chunks for {problem_id}")
+                return [
+                    {"id": r["id"], "document": r["document"], "metadata": r.get("metadata", {}), "distance": 0.0}
+                    for r in response.data
+                ]
+        except Exception as e:
+            logger.debug(f"Direct document_chunks query failed for {problem_id}: {e}")
+
+        # Approach 2: semantic search + filter
+        try:
+            query_text = f"editorial solution approach for problem {problem_id} {title}"
+            all_results = self.query(query_text, top_k=50)
+            filtered = [r for r in all_results if r.get("metadata", {}).get("problem_id") == problem_id]
+            if filtered:
+                logger.info(f"Semantic editorial lookup: {len(filtered)} chunks for {problem_id}")
+            return filtered[:top_k]
+        except Exception as e:
+            logger.debug(f"Semantic editorial search failed for {problem_id}: {e}")
+
+        return []
+
     def query(self, query_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """
         Performs a semantic search query against the vector collection in Supabase.

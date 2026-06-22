@@ -2,7 +2,7 @@
 Code execution route.
 
 Execution strategy (in order of preference):
-  1. Piston public API  (emkc.org) — no key, no local deps
+  1. Wandbox public API (wandbox.org) — no key, no local deps
   2. Local subprocess  (g++ / python3 / java on the host)
 
 Both paths feed into output comparison when expected_output is provided.
@@ -73,8 +73,8 @@ def _finalize(result: ExecuteResponse, expected_output: Optional[str]) -> Execut
 
 # ── Wandbox execution ──────────────────────────────────────────────────────────
 
-async def _run_via_piston(request: ExecuteRequest) -> ExecuteResponse:
-    """Execute via the Wandbox public API (replaces Piston which threw 401). Raises RuntimeError if unavailable."""
+async def _run_via_wandbox(request: ExecuteRequest) -> ExecuteResponse:
+    """Execute via the Wandbox public API. Raises RuntimeError if unavailable."""
     lang_key = request.language.lower()
     compiler = LANGUAGE_MAP.get(lang_key, "gcc-head")
 
@@ -229,7 +229,7 @@ async def execute_code(request: ExecuteRequest):
     """
     Execute code and return stdout / stderr / verdict.
 
-    Tries Piston first; falls back to local subprocess on failure.
+    Tries Wandbox first; falls back to local subprocess on failure.
     If expected_output is provided the response includes matched_expected
     and status becomes 'accepted' or 'wrong_answer'.
     """
@@ -242,14 +242,14 @@ async def execute_code(request: ExecuteRequest):
 
     result: ExecuteResponse
 
-    # 1. Try Piston
+    # 1. Try Wandbox
     try:
-        result = await _run_via_piston(request)
-        logger.info(f"Piston execution: lang={lang_key}, exit={result.exit_code}")
+        result = await _run_via_wandbox(request)
+        logger.info(f"Wandbox execution: lang={lang_key}, exit={result.exit_code}")
     except Exception as e:
-        logger.warning(f"Piston unavailable ({e}) — falling back to local execution")
+        logger.warning(f"Wandbox unavailable ({type(e).__name__}: {e}) — falling back to local execution")
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, _run_local, request)
-        logger.info(f"Local execution: lang={lang_key}, exit={result.exit_code}")
+        logger.info(f"Local execution fallback: lang={lang_key}, exit={result.exit_code}")
 
     return _finalize(result, request.expected_output)
