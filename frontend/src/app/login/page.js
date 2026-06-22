@@ -73,7 +73,7 @@ export default function LoginPage() {
       
       // The middleware and useAuth hook will handle the redirect and state
       localStorage.setItem("cf_handle", handle.trim())
-      router.push("/dashboard")
+      window.location.href = "/dashboard"
     } catch (err) {
       setError(err.message)
     } finally {

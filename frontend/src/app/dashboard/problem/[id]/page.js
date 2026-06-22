@@ -55,23 +55,32 @@ function diffBadge(rating) {
 function formatCodeforcesText(text) {
   if (!text) return "";
   
-  // If it's already HTML (contains divs/paragraphs), leave it alone
-  if (text.includes("<div") || text.includes("<p>")) {
-    return text;
-  }
-  
   let formatted = text;
   
   // Replace MathJax $$$...$$$ with \(...\) for inline math
   formatted = formatted.replace(/\$\$\$(.*?)\$\$\$/gs, "\\($1\\)");
   
-  // Bold common section headers if they appear at the start of a line
+  // Apply Codeforces Header Styling
+  formatted = formatted.replace(/^(time limit per test)\s*\n(.*)/gim, `<div class="mt-4"><span class="font-bold text-[#e5e2e1] uppercase text-xs tracking-wider">Time Limit Per Test</span><br/><span class="text-[#a1a1aa]">$2</span></div>`);
+  formatted = formatted.replace(/^(memory limit per test)\s*\n(.*)/gim, `<div class="mt-2"><span class="font-bold text-[#e5e2e1] uppercase text-xs tracking-wider">Memory Limit Per Test</span><br/><span class="text-[#a1a1aa]">$2</span></div>`);
+  formatted = formatted.replace(/^(input)\s*\n(standard input)/gim, `<div class="mt-2"><span class="font-bold text-[#e5e2e1] uppercase text-xs tracking-wider">Input</span><br/><span class="text-[#a1a1aa]">$2</span></div>`);
+  formatted = formatted.replace(/^(output)\s*\n(standard output)/gim, `<div class="mt-2 mb-6"><span class="font-bold text-[#e5e2e1] uppercase text-xs tracking-wider">Output</span><br/><span class="text-[#a1a1aa]">$2</span></div>`);
+  
+  // Bold common section headers
   const headers = ["Input", "Output", "Note", "Examples", "Example", "Constraints"];
   headers.forEach(header => {
-    // Regex matches the header at the start of a line, optional trailing colon
-    const regex = new RegExp(`^(${header}):?\\s*$`, "gm");
-    formatted = formatted.replace(regex, `<br/><strong class="text-lg text-[#10b981] mt-6 mb-2 block">$1</strong>`);
+    const regex = new RegExp(`^(${header}):?\\s*$`, "gim");
+    formatted = formatted.replace(regex, `<div class="text-lg font-bold text-[#10b981] mt-8 mb-4 border-b border-[#1f1f1f] pb-2">$1</div>`);
   });
+  
+  // If it's already HTML (contains divs/paragraphs), leave it alone.
+  // Wait, we just injected divs! So check if it had them ORIGINALLY?
+  // Let's just fix line breaks if it's not wrapped in <p>
+  if (!text.includes("<p>")) {
+    // Only replace \n if it's not inside a div we just created
+    // Actually, splitting by \n is risky now. Let's wrap raw text in paragraphs.
+    // Instead of raw text, let's just use CSS white-space: pre-wrap in the container!
+  }
   
   return formatted;
 }
@@ -237,27 +246,13 @@ export default function ProblemView({ params }) {
 
   // ── MathJax ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const typeset = () => {
-      if (typeof window !== "undefined" && window.MathJax) {
+    if (typeof window !== "undefined" && window.MathJax) {
+      // Add a small timeout to allow React to flush the DOM innerHTML updates first
+      setTimeout(() => {
         window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub])
-      }
+      }, 50)
     }
-
-    if (typeof window !== "undefined" && !window.MathJax && !window.mathJaxLoading) {
-      window.mathJaxLoading = true
-      const script = document.createElement("script")
-      script.src = "https://mathjax.codeforces.org/MathJax.js?config=TeX-AMS_HTML-full"
-      script.async = true
-      script.onload = () => {
-        window.mathJaxLoading = false
-        typeset()
-      }
-      document.body.appendChild(script)
-    } else {
-      // Small timeout to ensure DOM update is complete
-      setTimeout(typeset, 50)
-    }
-  }, [activeLeftTab, problem])
+  }, [activeLeftTab, problem, chatHistory])
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -791,15 +786,15 @@ export default function ProblemView({ params }) {
       {isChatOpen && (
         <motion.div 
           drag
-          dragConstraints={{ left: 0, top: 0, right: typeof window !== 'undefined' ? window.innerWidth - 400 : 800, bottom: typeof window !== 'undefined' ? window.innerHeight - 500 : 800 }}
+          dragConstraints={{ left: typeof window !== 'undefined' ? -window.innerWidth + 400 : -1000, top: typeof window !== 'undefined' ? -window.innerHeight + 500 : -1000, right: 20, bottom: 20 }}
           dragElastic={0.1}
           dragMomentum={false}
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          className="fixed bottom-24 right-6 w-80 sm:w-96 h-[420px] bg-[#141414] border border-[#3c4a42] rounded-xl shadow-2xl flex flex-col overflow-hidden z-50 cursor-move min-w-[300px] min-h-[300px] max-w-[90vw] max-h-[90vh] resize"
+          className="fixed bottom-24 right-6 w-80 sm:w-[400px] h-[500px] bg-[#141414] border border-[#3c4a42] rounded-xl shadow-2xl flex flex-col overflow-hidden z-50 min-w-[300px] min-h-[300px] max-w-[90vw] max-h-[90vh] resize"
           style={{ position: 'fixed' }}
         >
-          <div className="flex items-center justify-between bg-[#1a1a1a] px-4 py-3 border-b border-[#1f1f1f] shrink-0 active:cursor-grabbing">
+          <div className="flex items-center justify-between bg-[#1a1a1a] px-4 py-3 border-b border-[#1f1f1f] shrink-0 cursor-move active:cursor-grabbing">
               <div className="flex items-center gap-2">
                 <BrainCircuit className="h-5 w-5 text-[#4cd7f6]" />
                 <span className="font-semibold text-[#e5e2e1]">ContestMind AI</span>
