@@ -26,13 +26,19 @@ router = APIRouter()
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 WANDBOX_URL = "https://wandbox.org/api/compile.json"
-WANDBOX_TIMEOUT = 20.0   # seconds
-RUN_TIMEOUT_SEC = 10    # wall-clock limit for user code
+WANDBOX_TIMEOUT = 20.0
+RUN_TIMEOUT_SEC = 10
 COMPILE_TIMEOUT_SEC = 45
 
+# Maps frontend language id → Wandbox compiler name
 LANGUAGE_MAP = {
     "cpp":        "gcc-head",
     "c++":        "gcc-head",
+    "python":     "cpython-3.12.0",
+    "python3":    "cpython-3.12.0",
+    "java":       "openjdk-head",
+    "javascript": "nodejs-head",
+    "js":         "nodejs-head",
 }
 
 SUPPORTED_LANGUAGES = sorted(set(LANGUAGE_MAP.keys()))
@@ -202,6 +208,10 @@ def _run_local(request: ExecuteRequest) -> ExecuteResponse:
         with tempfile.TemporaryDirectory() as tmpdir:
             if lang in ("cpp", "c++"):
                 return _run_cpp_local(tmpdir, request.code, request.stdin)
+            elif lang in ("python", "python3"):
+                return _run_python_local(tmpdir, request.code, request.stdin)
+            elif lang == "java":
+                return _run_java_local(tmpdir, request.code, request.stdin)
             else:
                 return ExecuteResponse(
                     stderr=f"Language '{lang}' not supported for local execution",
