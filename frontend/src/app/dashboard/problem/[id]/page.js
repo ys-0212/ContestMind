@@ -57,14 +57,16 @@ function formatCodeforcesText(text) {
   
   let formatted = text;
   
-  // Replace MathJax $$$...$$$ with \(...\) for inline math
+  // Replace MathJax $$$...$$$ with standard $$...$$ or \(...\)
+  // Codeforces usually has $$$x$$$, we will replace it with \(x\) 
+  // Wait, standard MathJax Hub Typeset parses \( \). Let's explicitly trigger it.
   formatted = formatted.replace(/\$\$\$(.*?)\$\$\$/gs, "\\($1\\)");
   
-  // Apply Codeforces Header Styling
-  formatted = formatted.replace(/^(time limit per test)\s*\n(.*)/gim, `<div class="mt-4"><span class="font-bold text-[#e5e2e1] uppercase text-xs tracking-wider">Time Limit Per Test</span><br/><span class="text-[#a1a1aa]">$2</span></div>`);
-  formatted = formatted.replace(/^(memory limit per test)\s*\n(.*)/gim, `<div class="mt-2"><span class="font-bold text-[#e5e2e1] uppercase text-xs tracking-wider">Memory Limit Per Test</span><br/><span class="text-[#a1a1aa]">$2</span></div>`);
-  formatted = formatted.replace(/^(input)\s*\n(standard input)/gim, `<div class="mt-2"><span class="font-bold text-[#e5e2e1] uppercase text-xs tracking-wider">Input</span><br/><span class="text-[#a1a1aa]">$2</span></div>`);
-  formatted = formatted.replace(/^(output)\s*\n(standard output)/gim, `<div class="mt-2 mb-6"><span class="font-bold text-[#e5e2e1] uppercase text-xs tracking-wider">Output</span><br/><span class="text-[#a1a1aa]">$2</span></div>`);
+  // Strip limits from body since we extract them
+  formatted = formatted.replace(/^(time limit per test)\s*\n(.*)/gim, "");
+  formatted = formatted.replace(/^(memory limit per test)\s*\n(.*)/gim, "");
+  formatted = formatted.replace(/^(input)\s*\n(standard input)/gim, "");
+  formatted = formatted.replace(/^(output)\s*\n(standard output)/gim, "");
   
   // Bold common section headers
   const headers = ["Input", "Output", "Note", "Examples", "Example", "Constraints"];
@@ -73,31 +75,30 @@ function formatCodeforcesText(text) {
     formatted = formatted.replace(regex, `<div class="text-lg font-bold text-[#10b981] mt-8 mb-4 border-b border-[#1f1f1f] pb-2">$1</div>`);
   });
   
-  // If it's already HTML (contains divs/paragraphs), leave it alone.
-  // Wait, we just injected divs! So check if it had them ORIGINALLY?
-  // Let's just fix line breaks if it's not wrapped in <p>
-  if (!text.includes("<p>")) {
-    // Only replace \n if it's not inside a div we just created
-    // Actually, splitting by \n is risky now. Let's wrap raw text in paragraphs.
-    // Instead of raw text, let's just use CSS white-space: pre-wrap in the container!
-  }
-  
   return formatted;
 }
 
 function splitStatement(problem) {
-  if (!problem || !problem.statement) return { body: null, examples: [] }
+  if (!problem || !problem.statement) return { body: null, examples: [], timeLimit: "2 seconds", memoryLimit: "256 megabytes" }
   
-  // If backend provided examples, use them. Otherwise fallback to empty.
   const examples = problem.examples || []
   
-  // Format the statement and editorial to handle raw text from old scraped data
+  // Extract limits before formatting
+  let timeLimit = "2 seconds";
+  let memoryLimit = "256 megabytes";
+  
+  const timeMatch = problem.statement.match(/time limit per test\s*\n(.*)/i);
+  if (timeMatch) timeLimit = timeMatch[1].trim();
+  
+  const memMatch = problem.statement.match(/memory limit per test\s*\n(.*)/i);
+  if (memMatch) memoryLimit = memMatch[1].trim();
+  
   const formattedStatement = formatCodeforcesText(problem.statement);
   if (problem.editorial) {
     problem.editorial = formatCodeforcesText(problem.editorial);
   }
   
-  return { body: formattedStatement, examples }
+  return { body: formattedStatement, examples, timeLimit, memoryLimit }
 }
 
 // ── Components ───────────────────────────────────────────────────────────────
@@ -390,9 +391,9 @@ export default function ProblemView({ params }) {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const probabilityPct = probabilityData?.probability_percent ?? null
-  const { body: statementBody, examples: parsedExamples } = problem?.statement
+  const { body: statementBody, examples: parsedExamples, timeLimit, memoryLimit } = problem?.statement
     ? splitStatement(problem)
-    : { body: null, examples: [] }
+    : { body: null, examples: [], timeLimit: "2 seconds", memoryLimit: "256 megabytes" }
 
   const hasStatement = Boolean(problem?.statement)
 
@@ -466,8 +467,8 @@ export default function ProblemView({ params }) {
                     ))}
                   </div>
                   <div className="flex gap-6 text-xs font-mono text-[#a1a1aa]">
-                    <span>time: <span className="text-[#e5e2e1]">2 s</span></span>
-                    <span>mem: <span className="text-[#e5e2e1]">256 MB</span></span>
+                    <span>time: <span className="text-[#e5e2e1]">{timeLimit}</span></span>
+                    <span>mem: <span className="text-[#e5e2e1]">{memoryLimit}</span></span>
                   </div>
                 </div>
 

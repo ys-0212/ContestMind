@@ -25,14 +25,14 @@ router = APIRouter()
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-PISTON_URL = "https://emkc.org/api/v2/piston/execute"
-PISTON_TIMEOUT = 20.0   # seconds
+WANDBOX_URL = "https://wandbox.org/api/compile.json"
+WANDBOX_TIMEOUT = 20.0   # seconds
 RUN_TIMEOUT_SEC = 10    # wall-clock limit for user code
 COMPILE_TIMEOUT_SEC = 45
 
 LANGUAGE_MAP = {
-    "cpp":        ("cpp",        "*"),
-    "c++":        ("cpp",        "*"),
+    "cpp":        "gcc-head",
+    "c++":        "gcc-head",
 }
 
 SUPPORTED_LANGUAGES = sorted(set(LANGUAGE_MAP.keys()))
@@ -65,49 +65,48 @@ def _finalize(result: ExecuteResponse, expected_output: Optional[str]) -> Execut
     return result
 
 
-# ── Piston execution ──────────────────────────────────────────────────────────
+# ── Wandbox execution ──────────────────────────────────────────────────────────
 
 async def _run_via_piston(request: ExecuteRequest) -> ExecuteResponse:
-    """Execute via the Piston public API. Raises RuntimeError if unavailable."""
+    """Execute via the Wandbox public API (replaces Piston which threw 401). Raises RuntimeError if unavailable."""
     lang_key = request.language.lower()
-    piston_lang, piston_ver = LANGUAGE_MAP[lang_key]
+    compiler = LANGUAGE_MAP.get(lang_key, "gcc-head")
 
     payload = {
-        "language": piston_lang,
-        "version": piston_ver,
-        "files": [{"content": request.code}],
-        "stdin": request.stdin,
-        "run_timeout": RUN_TIMEOUT_SEC * 1000,
-        "compile_timeout": COMPILE_TIMEOUT_SEC * 1000,
+        "compiler": compiler,
+        "code": request.code,
+        "stdin": request.stdin or "",
     }
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json"
+        "Content-Type": "application/json"
     }
     
-    async with httpx.AsyncClient(timeout=PISTON_TIMEOUT, headers=headers) as client:
-        resp = await client.post(PISTON_URL, json=payload)
+    async with httpx.AsyncClient(timeout=WANDBOX_TIMEOUT, headers=headers) as client:
+        resp = await client.post(WANDBOX_URL, json=payload)
 
     if resp.status_code != 200:
-        raise RuntimeError(f"Piston returned HTTP {resp.status_code}")
+        raise RuntimeError(f"Wandbox returned HTTP {resp.status_code}")
 
     data = resp.json()
-    compile_data = data.get("compile") or {}
-    run_data = data.get("run") or {}
-
-    if compile_data and compile_data.get("code", 0) != 0:
+    status = data.get("status", "1")
+    
+    # Wandbox returns "0" for success, but compile errors are captured in "compiler_error"
+    compiler_error = data.get("compiler_error", "")
+    if compiler_error:
         return ExecuteResponse(
             stdout="",
-            stderr=compile_data.get("stderr") or compile_data.get("output") or "",
-            exit_code=compile_data.get("code", 1),
+            stderr=compiler_error,
+            exit_code=1,
             status="compile_error",
         )
 
     return ExecuteResponse(
-        stdout=run_data.get("stdout") or run_data.get("output") or "",
-        stderr=run_data.get("stderr") or "",
-        exit_code=run_data.get("code", 0),
+        stdout=data.get("program_output", ""),
+        stderr=data.get("program_error", ""),
+        exit_code=0 if status == "0" else 1,
+
     )
 
 
