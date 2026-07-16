@@ -1,3 +1,8 @@
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*InconsistentVersionWarning.*")
+warnings.filterwarnings("ignore", message=".*If you are loading a serialized model.*")
+
 """
 Main application entry point.
 - Initializes the FastAPI app.

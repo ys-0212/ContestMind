@@ -7,10 +7,10 @@ logger = logging.getLogger(__name__)
 
 class ScraperService:
     @staticmethod
-    def scrape_problem(problem_id: str) -> Optional[Tuple[str, List[Dict[str, str]]]]:
+    def scrape_problem(problem_id: str) -> Optional[Tuple[str, List[Dict[str, str]], Optional[str]]]:
         """
         Scrapes a Codeforces problem by its ID (e.g. 2224A).
-        Returns a tuple: (html_statement, examples_list)
+        Returns a tuple: (html_statement, examples_list, html_editorial)
         """
         import re
         m = re.match(r"^(\d+)([A-Za-z][A-Za-z0-9]*)$", problem_id.strip().upper())
@@ -81,4 +81,27 @@ class ScraperService:
         
         html_content = str(statement_div)
         
-        return html_content, examples
+        # 4. Try to fetch the editorial
+        html_editorial = None
+        try:
+            tutorial_url = None
+            for a in soup.find_all('a'):
+                if a.text and ('Tutorial' in a.text or 'tutorial' in a.text.lower()):
+                    href = a.get('href')
+                    if href:
+                        if not href.startswith('http'):
+                            href = 'https://codeforces.com' + href
+                        tutorial_url = href
+                        break
+            
+            if tutorial_url:
+                tut_resp = curl_requests.get(tutorial_url, impersonate="chrome", timeout=15.0)
+                if tut_resp.status_code == 200:
+                    tut_soup = BeautifulSoup(tut_resp.text, "html.parser")
+                    tut_div = tut_soup.find("div", class_="ttypography")
+                    if tut_div:
+                        html_editorial = str(tut_div)
+        except Exception as e:
+            logger.error(f"Failed to fetch tutorial for {problem_id}: {e}")
+
+        return html_content, examples, html_editorial

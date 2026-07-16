@@ -229,16 +229,23 @@ class ProblemService:
                         except Exception as e:
                             logger.error(f"Failed to upsert merged problem {normalized}: {e}")
             
-        if problem and not problem.statement:
+        if problem and (not problem.statement or not problem.editorial):
             from app.services.scraper_service import ScraperService
             scraped = ScraperService.scrape_problem(normalized)
             if scraped:
-                html_statement, examples = scraped
-                problem = problem.model_copy(update={
-                    "statement": html_statement,
-                    "examples": [ProblemExample(**ex) for ex in examples],
-                    "has_statement": True
-                })
+                html_statement, examples, html_editorial = scraped
+                
+                update_dict = {}
+                if not problem.statement:
+                    update_dict["statement"] = html_statement
+                    update_dict["examples"] = [ProblemExample(**ex) for ex in examples]
+                    update_dict["has_statement"] = True
+                
+                if html_editorial and not problem.editorial:
+                    update_dict["editorial"] = html_editorial
+                    
+                if update_dict:
+                    problem = problem.model_copy(update=update_dict)
                 # Cache it back to Supabase
                 if self.supabase_client:
                     try:
