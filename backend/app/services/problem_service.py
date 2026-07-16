@@ -285,11 +285,15 @@ class ProblemService:
 
         if self.supabase_client:
             try:
-                query = self.supabase_client.table("problems").select("*")
+                query = self.supabase_client.table("problems").select(
+                    "problem_id,title,rating,tags,url,has_statement,source"
+                )
                 if min_rating is not None:
                     query = query.gte("rating", min_rating)
                 if max_rating is not None:
                     query = query.lte("rating", max_rating)
+                if limit:
+                    query = query.limit(limit)
                 
                 # We fetch a larger pool and shuffle manually if needed, or just let Supabase return all matching
                 resp = query.execute()
