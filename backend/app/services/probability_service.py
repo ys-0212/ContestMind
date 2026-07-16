@@ -2,6 +2,10 @@ import logging
 import os
 import joblib
 import pandas as pd
+import warnings
+
+warnings.filterwarnings("ignore", message=".*InconsistentVersionWarning.*")
+warnings.filterwarnings("ignore", message=".*If you are loading a serialized model.*")
 
 from app.services.problem_service import ProblemService
 from app.services.profile_service import ProfileService

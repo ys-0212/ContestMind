@@ -206,6 +206,28 @@ class ProblemService:
 
         if not problem:
             problem = self._problems_db.get(normalized) or self._build_from_cf_api(normalized)
+        else:
+            local_p = self._problems_db.get(normalized)
+            if local_p:
+                update_needed = False
+                update_dict = {}
+                if not problem.editorial and local_p.editorial:
+                    update_dict["editorial"] = local_p.editorial
+                    update_needed = True
+                if not problem.statement and local_p.statement:
+                    update_dict["statement"] = local_p.statement
+                    update_dict["examples"] = local_p.examples
+                    update_dict["has_statement"] = True
+                    update_needed = True
+                if update_dict:
+                    problem = problem.model_copy(update=update_dict)
+                    if update_needed and self.supabase_client:
+                        try:
+                            self.supabase_client.table("problems").upsert(
+                                problem.model_dump(mode="json")
+                            ).execute()
+                        except Exception as e:
+                            logger.error(f"Failed to upsert merged problem {normalized}: {e}")
             
         if problem and not problem.statement:
             from app.services.scraper_service import ScraperService
@@ -220,7 +242,7 @@ class ProblemService:
                 # Cache it back to Supabase
                 if self.supabase_client:
                     try:
-                        self.supabase_client.table("problems").upsert({
+                        upsert_data = {
                             "problem_id": problem.problem_id,
                             "title": problem.title,
                             "rating": problem.rating,
@@ -230,7 +252,11 @@ class ProblemService:
                             "examples": examples,
                             "has_statement": True,
                             "source": "codeforces"
-                        }).execute()
+                        }
+                        if problem.editorial:
+                            upsert_data["editorial"] = problem.editorial
+                            
+                        self.supabase_client.table("problems").upsert(upsert_data).execute()
                     except Exception as e:
                         logger.error(f"Failed to cache scraped problem {normalized} to Supabase: {e}")
                 
