@@ -91,3 +91,12 @@ export function useAvailableProblems(minRating = 0, maxRating = 5000, limit = 15
   )
   return { problems: data?.problems || [], count: data?.count || 0, error, isLoading, mutate }
 }
+
+export function useUserAttempts(handle) {
+  const { data, error, isLoading, mutate } = useSWR(
+    handle ? `user-attempts-${handle}` : null,
+    () => apiClient.getAttempts(handle),
+    { revalidateOnFocus: false, revalidateIfStale: false, dedupingInterval: 30000, keepPreviousData: true }
+  )
+  return { attempts: data || [], error, isLoading, mutate }
+}

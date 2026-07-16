@@ -7,12 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import {
   Play, Send, ChevronRight, Lock, BrainCircuit, Terminal, ArrowLeft,
   Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, Copy,
-  WrapText, FileCode, AlignLeft, Upload,
+  WrapText, FileCode, AlignLeft, Upload, Circle
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { apiClient } from "@/lib/api"
-import { useProblem, useProbability } from "@/hooks/useAPI"
+import { useProblem, useProbability, useUserAttempts } from "@/hooks/useAPI"
 import { ChatMessage } from "@/components/ChatMessage"
 
 // ── Monaco Editor (SSR-safe) ──────────────────────────────────────────────────
@@ -334,6 +334,38 @@ export default function ProblemView({ params }) {
     handle && handle !== "guest" ? handle : null, id
   )
 
+  const { attempts, mutate: mutateAttempts } = useUserAttempts(handle && handle !== "guest" ? handle : null)
+
+  const isSolved = useMemo(() => {
+    if (!attempts) return false
+    const attempt = attempts.find(a => a.problem_id === id)
+    return attempt?.outcome === 'solved'
+  }, [attempts, id])
+
+  const toggleSolved = async () => {
+    if (!handle || handle === "guest") {
+      showToast("Please set your handle in settings to track progress.", "error")
+      return
+    }
+    const newOutcome = isSolved ? 'unsolved' : 'solved'
+    const mockAttempt = {
+      id: "temp-" + Date.now(),
+      problem_id: id,
+      handle,
+      outcome: newOutcome,
+      created_at: new Date().toISOString()
+    }
+    mutateAttempts([mockAttempt, ...(attempts || [])], false)
+    try {
+      await apiClient.recordAttempt(handle, id, newOutcome)
+      mutateAttempts()
+      showToast(newOutcome === 'solved' ? "Marked as solved!" : "Marked as unsolved.")
+    } catch (error) {
+      mutateAttempts()
+      showToast("Failed to update status", "error")
+    }
+  }
+
   // ── UI tabs ────────────────────────────────────────────────────────────────
   const [activeLeftTab,  setActiveLeftTab]  = useState("statement")
   const [activeRightTab, setActiveRightTab] = useState("input")
@@ -616,7 +648,14 @@ export default function ProblemView({ params }) {
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-2 pr-3">
+            <div className="flex items-center gap-3 pr-3">
+              <button onClick={toggleSolved} className="focus:outline-none flex items-center transition-colors">
+                {isSolved ? (
+                  <CheckCircle2 className="h-5 w-5 text-[#10b981]" title="Marked as Solved" />
+                ) : (
+                  <Circle className="h-5 w-5 text-[#3c4a42] hover:text-[#10b981]" title="Mark as Solved" />
+                )}
+              </button>
               <Badge variant={diffBadge(problem.rating)}>{problem.rating ?? "N/A"}</Badge>
               <a href={cfUrl(id)} target="_blank" rel="noopener" className="text-[#a1a1aa] hover:text-[#4cd7f6] transition-colors">
                 <ExternalLink className="h-3.5 w-3.5" />

@@ -21,13 +21,8 @@ class ScraperService:
         url = f"https://codeforces.com/problemset/problem/{contest_id}/{index}"
         
         try:
-            import cloudscraper
-            scraper = cloudscraper.create_scraper(browser={
-                'browser': 'chrome',
-                'platform': 'windows',
-                'desktop': True
-            })
-            response = scraper.get(url, timeout=15.0)
+            from curl_cffi import requests as curl_requests
+            response = curl_requests.get(url, impersonate="chrome", timeout=15.0)
             response.raise_for_status()
         except Exception as e:
             logger.error(f"Failed to fetch CF problem {problem_id}: {e}")

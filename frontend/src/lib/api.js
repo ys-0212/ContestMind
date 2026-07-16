@@ -51,6 +51,19 @@ export const apiClient = {
     return this.get(`/profiles/${handle}/submissions?limit=${limit}`)
   },
 
+  async getAttempts(handle) {
+    return this.get(`/attempts/${handle}`)
+  },
+
+  async recordAttempt(handle, problemId, outcome) {
+    return this.post('/attempts', {
+      handle,
+      problem_id: problemId,
+      outcome,
+      hints_used: 0
+    })
+  },
+
   // --- Problems ---
 
   async getProblems(tags = "") {

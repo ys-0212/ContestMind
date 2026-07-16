@@ -5,9 +5,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Filter, Circle, Loader2, BookOpen, X, SlidersHorizontal } from "lucide-react"
+import { Search, Filter, Circle, CheckCircle2, Loader2, BookOpen, X, SlidersHorizontal } from "lucide-react"
 
-import { useAvailableProblems, useSearch } from "@/hooks/useAPI"
+import { useAvailableProblems, useSearch, useUserAttempts } from "@/hooks/useAPI"
+import { apiClient } from "@/lib/api"
 
 const DISPLAY_LIMIT = 250
 
@@ -29,18 +30,28 @@ export default function ProblemsPage() {
   const [filterMinRating, setFilterMinRating] = useState("")
   const [filterMaxRating, setFilterMaxRating] = useState("")
   const [filterTags, setFilterTags] = useState([])
+  const [filterStatus, setFilterStatus] = useState("all") // 'all', 'solved', 'unsolved'
 
   const activeFilterCount = (filterMinRating ? 1 : 0) + (filterMaxRating ? 1 : 0)
-    + filterTags.length
+    + filterTags.length + (filterStatus !== "all" ? 1 : 0)
 
   const clearFilters = () => {
     setFilterMinRating("")
     setFilterMaxRating("")
     setFilterTags([])
+    setFilterStatus("all")
   }
 
   const toggleTag = (tag) =>
     setFilterTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+
+  const [handle, setHandle] = useState(null)
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setHandle(localStorage.getItem('cf_handle') || 'guest')
+    }
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500)
@@ -52,6 +63,68 @@ export default function ProblemsPage() {
   const { searchResults, isLoading: loadingSearch } = useSearch(
     debouncedSearch.length >= 3 ? debouncedSearch : null
   )
+
+  const { attempts, mutate: mutateAttempts } = useUserAttempts(handle && handle !== "guest" ? handle : null)
+  
+  // Create a set of solved problem IDs
+  const solvedProblemIds = useMemo(() => {
+    const set = new Set()
+    if (!attempts) return set
+    attempts.forEach(a => {
+      if (a.outcome === 'solved') {
+        set.add(a.problem_id)
+      } else if (a.outcome === 'unsolved') {
+        // if latest is unsolved, we should remove it, but assume the API orders by date desc
+        // so we could just take the latest. To keep it simple, if they marked it solved, it's solved.
+        // wait, we need to handle "unsolved" toggling.
+        // We can do it by finding the first (latest) outcome for each problem.
+      }
+    })
+    
+    // Better logic: iterate through attempts (which are ordered by created_at desc)
+    // and take the first outcome for each problem_id
+    const latestStatus = new Map()
+    for (const a of attempts) {
+      if (!latestStatus.has(a.problem_id)) {
+        latestStatus.set(a.problem_id, a.outcome)
+      }
+    }
+    
+    for (const [pId, outcome] of latestStatus.entries()) {
+      if (outcome === 'solved') set.add(pId)
+    }
+    
+    return set
+  }, [attempts])
+
+  const toggleProblemStatus = async (e, problemId) => {
+    e.stopPropagation()
+    if (!handle || handle === 'guest') {
+      alert("Please set your handle in settings to track progress.")
+      return
+    }
+    
+    const isSolved = solvedProblemIds.has(problemId)
+    const newOutcome = isSolved ? 'unsolved' : 'solved'
+    
+    // Optimistic update
+    const mockAttempt = {
+      id: "temp-" + Date.now(),
+      problem_id: problemId,
+      handle,
+      outcome: newOutcome,
+      created_at: new Date().toISOString()
+    }
+    mutateAttempts([mockAttempt, ...attempts], false)
+    
+    try {
+      await apiClient.recordAttempt(handle, problemId, newOutcome)
+      mutateAttempts() // Revalidate
+    } catch (error) {
+      console.error("Failed to update status", error)
+      mutateAttempts() // Revert
+    }
+  }
 
   // Dynamic POTD: prefer problems in 1300–1800 range
   const potdProblem = useMemo(() => {
@@ -73,6 +146,11 @@ export default function ProblemsPage() {
     if (filterMaxRating) result = result.filter(p => p.rating && p.rating <= Number(filterMaxRating))
     if (filterTags.length > 0) {
       result = result.filter(p => filterTags.every(tag => (p.tags || []).includes(tag)))
+    }
+    if (filterStatus === "solved") {
+      result = result.filter(p => solvedProblemIds.has(p.problem_id))
+    } else if (filterStatus === "unsolved") {
+      result = result.filter(p => !solvedProblemIds.has(p.problem_id))
     }
     return result
   }
@@ -127,7 +205,7 @@ export default function ProblemsPage() {
     return clientFiltered
   }, [
     baseProblems, lowerSearch, debouncedSearch, searchResults, showAll,
-    filterMinRating, filterMaxRating, filterTags, searchTerm,
+    filterMinRating, filterMaxRating, filterTags, filterStatus, searchTerm, solvedProblemIds
   ])
 
   const getDiffBadge = (rating) => {
@@ -261,7 +339,18 @@ export default function ProblemsPage() {
               />
             </div>
             <div className="flex items-end">
-              {/* Removed Full statement only filter since problems are loaded on demand */}
+              <div className="w-full">
+                <label className="text-[10px] text-[#a1a1aa] font-semibold uppercase tracking-wider block mb-1">Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className="w-full bg-[#0c0c0c] border border-[#3c4a42] rounded px-2.5 py-1.5 text-sm text-[#e5e2e1] focus:outline-none focus:border-[#10b981] transition-colors"
+                >
+                  <option value="all">All Problems</option>
+                  <option value="solved">Solved</option>
+                  <option value="unsolved">Unsolved</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -312,7 +401,16 @@ export default function ProblemsPage() {
                   onClick={() => router.push(`/dashboard/problem/${problem.problem_id}`)}
                 >
                   <div className="col-span-1 flex justify-center">
-                    <Circle className="h-5 w-5 text-[#3c4a42]" />
+                    <button 
+                      onClick={(e) => toggleProblemStatus(e, problem.problem_id)}
+                      className="focus:outline-none"
+                    >
+                      {solvedProblemIds.has(problem.problem_id) ? (
+                        <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-[#3c4a42] hover:text-[#10b981] transition-colors" />
+                      )}
+                    </button>
                   </div>
 
                   <div className="col-span-2 font-mono text-sm text-[#bbcabf] flex items-center gap-1.5">
