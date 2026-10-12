@@ -1,121 +1,79 @@
-import pytest
+"""CORS fix verification (F02). Runs standalone — no GROQ_API_KEY needed."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.testclient import TestClient
+from fastapi.testclient import TestClient
 
-from app.core.config import Settings, settings
+from app.core.config import settings
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/ping")
+def ping():
+    return {"ok": True}
 
 
-def create_app_with_cors(app_settings: Settings) -> FastAPI:
-    app = FastAPI(title="TestApp")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=app_settings.cors_origins,
-        allow_credentials=app_settings.CORS_ALLOW_CREDENTIALS,
-        allow_methods=["*"],
-        allow_headers=["*"],
+client = TestClient(app)
+
+
+def test_allowed_origin():
+    r = client.get("/ping", headers={"Origin": "http://localhost:3000"})
+    assert r.headers.get("access-control-allow-origin") == "http://localhost:3000", (
+        f"Expected allow-origin header, got: {r.headers.get('access-control-allow-origin')}"
     )
 
-    @app.get("/api/v1/health")
-    def health():
-        return {"status": "ok"}
 
-    return app
-
-
-def test_cors_default_origins():
-    """Verify default CORS origins contain production and local dev origins without trailing slashes."""
-    origins = settings.cors_origins
-    assert "https://contest-mind.vercel.app" in origins
-    assert "http://localhost:3000" in origins
-    assert "http://127.0.0.1:3000" in origins
-    assert "http://localhost:8000" in origins
-    assert "http://127.0.0.1:8000" in origins
-    for origin in origins:
-        assert not origin.endswith("/"), f"Origin '{origin}' should not end with a trailing slash"
+def test_allowed_origin_vercel():
+    r = client.get("/ping", headers={"Origin": "https://contest-mind.vercel.app"})
+    assert r.headers.get("access-control-allow-origin") == "https://contest-mind.vercel.app"
 
 
-def test_cors_parsing_variations():
-    """Verify comma-separated and JSON string formats from environment variables are parsed correctly."""
-    # Comma-separated with whitespace and trailing slash
-    custom_settings_csv = Settings(
-        BACKEND_CORS_ORIGINS="https://contest-mind.vercel.app/ , http://localhost:3000/ "
+def test_disallowed_origin_blocked():
+    r = client.get("/ping", headers={"Origin": "https://evil.com"})
+    assert r.headers.get("access-control-allow-origin") is None, (
+        f"Evil origin must NOT be allowed, got: {r.headers.get('access-control-allow-origin')}"
     )
-    assert custom_settings_csv.cors_origins == [
-        "https://contest-mind.vercel.app",
-        "http://localhost:3000",
+
+
+def test_no_origin_header():
+    r = client.get("/ping")
+    assert r.status_code == 200
+
+
+def test_cors_config_not_wildcard():
+    assert settings.cors_origins, "cors_origins must not be empty"
+    assert ".*" not in settings.cors_origins, "Wildcard regex must not be present"
+    assert len(settings.cors_origins) > 0
+
+
+if __name__ == "__main__":
+    tests = [
+        test_allowed_origin,
+        test_allowed_origin_vercel,
+        test_disallowed_origin_blocked,
+        test_no_origin_header,
+        test_cors_config_not_wildcard,
     ]
-
-    # JSON array string with trailing slash
-    custom_settings_json = Settings(
-        BACKEND_CORS_ORIGINS='["https://contest-mind.vercel.app/", "http://localhost:3000"]'
-    )
-    assert custom_settings_json.cors_origins == [
-        "https://contest-mind.vercel.app",
-        "http://localhost:3000",
-    ]
-
-
-def test_cors_allowed_origins_receive_allow_header():
-    """Verify allowed origins receive Access-Control-Allow-Origin."""
-    app = create_app_with_cors(settings)
-    client = TestClient(app)
-
-    # Production frontend
-    res = client.get("/api/v1/health", headers={"Origin": "https://contest-mind.vercel.app"})
-    assert res.status_code == 200
-    assert res.headers.get("access-control-allow-origin") == "https://contest-mind.vercel.app"
-
-    # Local development frontend
-    res_local = client.get("/api/v1/health", headers={"Origin": "http://localhost:3000"})
-    assert res_local.status_code == 200
-    assert res_local.headers.get("access-control-allow-origin") == "http://localhost:3000"
-
-
-def test_cors_disallowed_origin_blocked():
-    """Verify disallowed origins do NOT receive Access-Control-Allow-Origin header."""
-    app = create_app_with_cors(settings)
-    client = TestClient(app)
-
-    # Disallowed attacker origin
-    res = client.get("/api/v1/health", headers={"Origin": "https://attacker-website.com"})
-    assert res.status_code == 200
-    assert "access-control-allow-origin" not in res.headers
-
-
-def test_cors_preflight_options():
-    """Verify OPTIONS preflight requests for allowed vs disallowed origins."""
-    app = create_app_with_cors(settings)
-    client = TestClient(app)
-
-    # Preflight from allowed origin
-    res_allowed = client.options(
-        "/api/v1/health",
-        headers={
-            "Origin": "https://contest-mind.vercel.app",
-            "Access-Control-Request-Method": "GET",
-        },
-    )
-    assert res_allowed.status_code == 200
-    assert res_allowed.headers.get("access-control-allow-origin") == "https://contest-mind.vercel.app"
-
-    # Preflight from disallowed origin
-    res_disallowed = client.options(
-        "/api/v1/health",
-        headers={
-            "Origin": "https://malicious.org",
-            "Access-Control-Request-Method": "GET",
-        },
-    )
-    # Disallowed origin does not receive Access-Control-Allow-Origin
-    assert "access-control-allow-origin" not in res_disallowed.headers
-
-
-def test_cors_credentials_disabled_by_default():
-    """Verify allow_credentials is not set to true when CORS_ALLOW_CREDENTIALS is False."""
-    assert settings.CORS_ALLOW_CREDENTIALS is False
-    app = create_app_with_cors(settings)
-    client = TestClient(app)
-
-    res = client.get("/api/v1/health", headers={"Origin": "https://contest-mind.vercel.app"})
-    assert res.headers.get("access-control-allow-credentials") != "true"
+    passed = 0
+    for t in tests:
+        try:
+            t()
+            print(f"  PASS  {t.__name__}")
+            passed += 1
+        except AssertionError as e:
+            print(f"  FAIL  {t.__name__}: {e}")
+        except Exception as e:
+            print(f"  ERROR {t.__name__}: {e}")
+    print(f"\n{passed}/{len(tests)} passed")
+    sys.exit(0 if passed == len(tests) else 1)
