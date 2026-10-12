@@ -52,9 +52,31 @@ class Settings(BaseSettings):
     CHUNKS_DATA_DIR: Path = DATA_DIR / "chunks"
 
     # --- CORS Settings ---
-    BACKEND_CORS_ORIGINS: str | list[str] = [
+    BACKEND_CORS_ORIGINS: list[str] | str = [
         "http://localhost:3000",
+        "http://127.0.0.1:3000",
         "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://contest-mind.vercel.app",
     ]
+    CORS_ALLOW_CREDENTIALS: bool = False
+
+    @property
+    def cors_origins(self) -> list[str]:
+        raw = self.BACKEND_CORS_ORIGINS
+        if isinstance(raw, str):
+            raw = raw.strip()
+            if raw.startswith("[") and raw.endswith("]"):
+                import json
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, list):
+                        return [str(o).strip().rstrip("/") for o in parsed if str(o).strip()]
+                except Exception:
+                    pass
+            return [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
+        elif isinstance(raw, (list, tuple, set)):
+            return [str(o).strip().rstrip("/") for o in raw if str(o).strip()]
+        return []
 
 settings = Settings()
